@@ -1,16 +1,23 @@
-use pdf_bool::PdfBoolean;
-use pdf_num::PdfNumeric;
-use pdf_str::PdfString;
+use pdf_types::*;
 
-mod pdf_bool;
 mod pdf_error;
-mod pdf_num;
-mod pdf_str;
+mod pdf_file;
+mod pdf_types;
+
+pub use pdf_error::{PdfError, PdfErrorKind};
+pub use pdf_file::PdfFile;
+
+#[allow(dead_code)]
+mod pdf_constants {
+    const LINE_WIDTH: usize = 255;
+    const EOL: &'static str = "\r\n";
+}
 
 pub enum PdfObject {
     Boolean(PdfBoolean),
     Numeric(PdfNumeric),
     String(PdfString),
+    Name(PdfName),
 }
 
 #[cfg(test)]
