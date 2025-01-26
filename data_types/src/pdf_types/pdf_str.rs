@@ -11,7 +11,7 @@ pub struct PdfString {
 impl PdfString {
     pub fn from_bytes(bytes: &[u8]) -> Self {
         Self {
-            data: Vec::from_iter(bytes.iter().cloned()),
+            data: Vec::from_iter(bytes.iter().copied()),
         }
     }
 
@@ -92,7 +92,7 @@ impl PdfString {
                 };
             }
         }
-        if solidus && code.len() > 0 {
+        if solidus && !code.is_empty() {
             let Ok(code_value) = u8::from_str_radix(&code, 8) else {
                 return Err(PdfError {
                     kind: PdfErrorKind::ParseError,
@@ -200,7 +200,7 @@ mod tests {
                 example.0,
                 parsed,
                 parsed.clone().map(|s| s.len())
-            )
+            );
         }
     }
 

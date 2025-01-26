@@ -1,4 +1,4 @@
-use std::{convert::identity, str::FromStr};
+use std::str::FromStr;
 
 use super::{PdfError, PdfErrorKind};
 
@@ -49,9 +49,9 @@ impl FromStr for PdfCrossRefTableSection {
         let mut subsections = Vec::new();
         let mut subsection = None;
         let mut lines = s.lines();
-        if !lines
+        if lines
             .next()
-            .is_some_and(|k| k == super::constants::CROSS_REF_SECTION_KEYWORD)
+            .is_none_or(|k| k != super::constants::CROSS_REF_SECTION_KEYWORD)
         {
             return Err(PdfError {
                 kind: PdfErrorKind::ParseError,
@@ -93,7 +93,7 @@ impl FromStr for PdfCrossRefTableSubsectionHeader {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let items: Vec<usize> = s
             .split(' ')
-            .map(|p| p.parse())
+            .map(str::parse)
             .collect::<Result<_, _>>()
             .map_err(|_e| PdfError {
                 kind: PdfErrorKind::ParseError,
@@ -122,7 +122,7 @@ impl FromStr for PdfCrossRefTableEntry {
         }
         let items: Vec<_> = [s.get(..10), s.get(11..16), s.get(17..18)]
             .into_iter()
-            .filter_map(identity)
+            .flatten()
             .collect();
         if items.len() != 3 {
             return Err(PdfError {
@@ -155,14 +155,10 @@ impl FromStr for PdfCrossRefTableEntry {
 
 #[cfg(test)]
 mod tests {
-    use crate::pdf_file::{PdfCrossRefTable, PdfCrossRefTableEntry};
+    use super::*;
 
     mod examples {
-        use crate::pdf_file::{
-            PdfCrossRefTableEntry, PdfCrossRefTableSection, PdfCrossRefTableSubsection,
-            PdfCrossRefTableSubsectionHeader,
-        };
-
+        use super::*;
         const EX_2: &str = "xref
 0 6
 0000000003 65535 f
@@ -293,7 +289,7 @@ mod tests {
     fn parse_cross_table_section() {
         for example in examples::examples() {
             let parsed = example.0.parse();
-            assert_eq!(parsed, Ok(example.1))
+            assert_eq!(parsed, Ok(example.1));
         }
     }
     #[test]
@@ -303,7 +299,7 @@ mod tests {
                 .0
                 .parse()
                 .map(|r: PdfCrossRefTable| r.sections[0].clone());
-            assert_eq!(parsed, Ok(example.1))
+            assert_eq!(parsed, Ok(example.1));
         }
         let combined = examples::examples()
             .iter()
@@ -338,7 +334,7 @@ mod tests {
             assert!(
                 example.parse::<PdfCrossRefTableEntry>().is_err(),
                 "{example}"
-            )
+            );
         }
     }
 }

@@ -1,4 +1,4 @@
-use super::constants::*;
+use super::constants::{BINARY_MARKER_CHAR, BINARY_MARKER_LEN};
 use std::fmt::Display;
 pub struct PdfHeader {
     version: PdfVersion,

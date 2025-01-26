@@ -1,4 +1,4 @@
-use pdf_types::*;
+use pdf_types::{PdfBoolean, PdfName, PdfNumeric, PdfString};
 
 mod pdf_error;
 mod pdf_file;
@@ -10,7 +10,7 @@ pub use pdf_file::PdfFile;
 #[allow(dead_code)]
 mod pdf_constants {
     const LINE_WIDTH: usize = 255;
-    const EOL: &'static str = "\r\n";
+    const EOL: &str = "\r\n";
 }
 
 pub enum PdfObject {

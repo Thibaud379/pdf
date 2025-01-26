@@ -56,8 +56,8 @@ mod tests {
     fn parsing() {
         let p = |a: &str| {
             let c: PdfResult<PdfBoolean> = a.parse();
-            let b = c.map(Into::<bool>::into);
-            b
+            
+            c.map(Into::<bool>::into)
         };
         let err = Err(PdfError {
             kind: PdfErrorKind::ParseError,

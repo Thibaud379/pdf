@@ -1,12 +1,12 @@
-use pdf_cross_ref_table::*;
+use pdf_cross_ref_table::PdfCrossRefTable;
 use pdf_header::PdfHeader;
 
-use crate::pdf_error::*;
+use crate::pdf_error::{PdfError, PdfErrorKind};
 
 mod pdf_cross_ref_table;
 mod pdf_header;
 
-pub(self) mod constants {
+ mod constants {
     use std::char::REPLACEMENT_CHARACTER;
 
     pub const BINARY_MARKER_CHAR: char = REPLACEMENT_CHARACTER;
