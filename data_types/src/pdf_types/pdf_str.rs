@@ -1,6 +1,9 @@
-use std::str::{self, FromStr};
+use core::str;
+use std::str::FromStr;
 
-use crate::{PdfError, PdfErrorKind};
+use crate::{Parsable, PdfError, PdfErrorKind};
+
+use super::{EOLS, WHITESPACES};
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Clone)]
@@ -122,30 +125,146 @@ impl PdfString {
             });
         }
         s = &s[1..(s.len() - 1)];
-        for (a, b) in s.chars().zip(s.chars().skip(1)).step_by(2) {
+        let chars = s
+            .chars()
+            .filter(|b| !WHITESPACES.contains(&(*b as u8)))
+            .collect::<Vec<_>>();
+        for (a, b) in chars.iter().zip(chars.iter().skip(1)).step_by(2) {
             let s = String::from_iter([a, b]);
-            data.push(u8::from_str_radix(&s, 16).map_err(|_e| {
-                println!("{_e:?}");
-                PdfError {
-                    kind: PdfErrorKind::ParseError,
-                }
-            })?);
+            data.push(u8::from_str_radix(&s, 16)?);
         }
-        if s.len() % 2 != 0 {
-            let last = s.chars().last().unwrap();
-            let s = String::from_iter([last, '0']);
-            data.push(u8::from_str_radix(&s, 16).map_err(|_e| {
-                println!("{_e:?}");
-                PdfError {
-                    kind: PdfErrorKind::ParseError,
-                }
-            })?);
+        if chars.len() % 2 != 0 {
+            let last = chars.last().unwrap();
+            let s = String::from_iter([last, &'0']);
+            data.push(u8::from_str_radix(&s, 16)?);
         }
         Ok(Self { data })
     }
 
     pub fn len(&self) -> usize {
         self.data.len()
+    }
+
+    fn from_bytes_hexa(bytes: &[u8]) -> Result<(PdfString, &[u8]), PdfError> {
+        let e = Err(PdfError::with_kind(PdfErrorKind::ParseError));
+        let Some(right_bracket) = bytes.iter().position(|b| *b == b'>') else {
+            return e;
+        };
+
+        let first_token = &bytes[..=right_bracket];
+        let rest = &bytes[(right_bracket + 1)..];
+        let content = &first_token[1..first_token.len() - 1];
+
+        let data =
+            content
+                .iter()
+                .filter(|b| !WHITESPACES.contains(b))
+                .collect::<Vec<_>>()
+                .chunks(2)
+                .map(|p| {
+                    let l = *p[0];
+                    let r = *p.get(1).copied().unwrap_or(&b'0');
+                    if l.is_ascii_hexdigit() && r.is_ascii_hexdigit() {
+                        Ok(((l as char).to_digit(16).unwrap() * 16
+                            + (r as char).to_digit(16).unwrap()) as u8)
+                    } else {
+                        Err(PdfError::with_kind(PdfErrorKind::ParseError))
+                    }
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+
+        Ok((Self { data }, rest))
+    }
+
+    fn from_bytes_literal(mut bytes: &[u8]) -> Result<(PdfString, &[u8]), PdfError> {
+        let mut data = Vec::new();
+        let mut pars = 1;
+        bytes = &bytes[1..];
+        while let [byte, rest @ ..] = bytes {
+            let mut rest = rest;
+            let n = match *byte {
+                b')' => {
+                    pars -= 1;
+                    if pars == 0 {
+                        bytes = &bytes[1..];
+                        break;
+                    }
+                    b')'
+                }
+                b'(' => {
+                    pars += 1;
+                    b'('
+                }
+                b if EOLS.contains(&b) => {
+                    if b == b'\r' {
+                        if let [b'\n', rrest @ ..] = rest {
+                            rest = rrest;
+                        }
+                    }
+                    b'\n'
+                }
+                b'\\' => {
+                    if let [bbyte, rrest @ ..] = rest {
+                        let mut rrest = rrest;
+                        let n = match (*bbyte, rrest) {
+                            (b'n', _) => b'\n',
+                            (b't', _) => b'\t',
+                            (b'r', _) => b'\r',
+                            (b'b', _) => 0x08,
+                            (b'f', _) => 0xff,
+                            (b'\\', _) => b'\\',
+                            (b')', _) => b')',
+                            (b'(', _) => b'(',
+                            (b, r) if EOLS.contains(&b) => {
+                                bytes = if b == b'\r' {
+                                    if let [b'\n', rr @ ..] = r {
+                                        rr
+                                    } else {
+                                        r
+                                    }
+                                } else {
+                                    r
+                                };
+                                continue;
+                            }
+                            (b'0'..=b'7', [b'0'..=b'7', b'0'..=b'7', r @ ..]) => {
+                                let b = u8::from_str_radix(
+                                    unsafe { str::from_utf8_unchecked(&rest[..3]) },
+                                    8,
+                                )?;
+                                rrest = r;
+                                b
+                            }
+                            (b'0'..=b'7', [b'0'..=b'7', r @ ..]) => {
+                                let b = u8::from_str_radix(
+                                    unsafe { str::from_utf8_unchecked(&rest[..2]) },
+                                    8,
+                                )?;
+                                rrest = r;
+                                b
+                            }
+                            (b'0'..=b'7', r) => {
+                                let b = u8::from_str_radix(
+                                    unsafe { str::from_utf8_unchecked(&rest[..1]) },
+                                    8,
+                                )?;
+                                rrest = r;
+                                b
+                            }
+                            _ => continue,
+                        };
+                        rest = rrest;
+                        n
+                    } else {
+                        break;
+                    }
+                }
+                b => b,
+            };
+            data.push(n);
+            bytes = rest;
+        }
+        Ok((Self { data }, bytes))
     }
 }
 
@@ -162,25 +281,41 @@ impl FromStr for PdfString {
         }
     }
 }
+
+impl Parsable for PdfString {
+    fn from_bytes(b: &[u8]) -> Result<(Self, &[u8]), PdfError> {
+        match b.get(0) {
+            Some(b'<') => Self::from_bytes_hexa(b),
+            Some(b'(') => Self::from_bytes_literal(b),
+            _ => Err(PdfError {
+                kind: PdfErrorKind::ParseError,
+            }),
+        }
+    }
+}
 #[cfg(test)]
 mod tests {
-    use crate::PdfString;
+    use crate::{parse, PdfString};
 
     #[test]
-    fn hexa_parsing() {
-        let examples = ["<901FA3>", "<901FA>"];
+    fn hexa() {
+        let examples: [&str; 4] = ["<901FA3>", "<901FA>", "<901 FA>", "<90\n\t1FA>"];
         let expected = [
             PdfString::from_bytes(&[0x90, 0x1F, 0xA3]),
+            PdfString::from_bytes(&[0x90, 0x1F, 0xA0]),
+            PdfString::from_bytes(&[0x90, 0x1F, 0xA0]),
             PdfString::from_bytes(&[0x90, 0x1F, 0xA0]),
         ];
 
         for (r, s) in expected.into_iter().zip(examples) {
-            let parsed = s.parse::<PdfString>();
-            assert_eq!(parsed, Ok(r));
+            let parsed_str = s.parse();
+            let parsed_bytes = parse(s.as_bytes());
+            assert_eq!(parsed_bytes, Ok((r.clone(), &[] as &[u8])), "B => {s:?}");
+            assert_eq!(parsed_str, Ok(r), "S => {s:?}");
         }
     }
     #[test]
-    fn literal_parsing() {
+    fn literal() {
         let examples = [
             "(string)",
             "(new\nline)",
@@ -188,28 +323,33 @@ mod tests {
             "(*!&}^%)",
             "()",
             r"(\))",
+            "(a\\245a\\307)",
+            "(\\0053)",
+            "(\\053)",
+            "(\\53)",
+            "(\\53a)",
+            "(\\5a)",
         ];
-        let example_lens: [usize; 6] = [6, 8, 23, 6, 0, 1];
+        let expected = [
+            PdfString::from_bytes(b"string"),
+            PdfString::from_bytes(b"new\nline"),
+            PdfString::from_bytes(b"p(a)r(s)c(a(n)b)e(used)"),
+            PdfString::from_bytes(b"*!&}^%"),
+            PdfString::from_bytes(b""),
+            PdfString::from_bytes(b")"),
+            PdfString::from_bytes(&[b'a', 0o245, b'a', 0o307]),
+            PdfString::from_bytes(&[0o5, b'3']),
+            PdfString::from_bytes(&[0o53]),
+            PdfString::from_bytes(&[0o53]),
+            PdfString::from_bytes(&[0o53, b'a']),
+            PdfString::from_bytes(&[0o5, b'a']),
+        ];
 
-        for example in example_lens.into_iter().zip(examples) {
-            let parsed = example.1.parse::<PdfString>();
-            assert!(
-                parsed.clone().is_ok_and(|s| s.len() == example.0),
-                "`{}`({}) => {:?}({:?})",
-                example.1,
-                example.0,
-                parsed,
-                parsed.clone().map(|s| s.len())
-            );
-        }
-    }
-
-    #[test]
-    fn literal_error() {
-        let examples = [r"(()", r"())", r"((\))", r"(\())"];
-        for s in examples {
-            let parsed = s.parse::<PdfString>();
-            assert!(parsed.is_err());
+        for (e, r) in examples.into_iter().zip(expected) {
+            let parsed_str = e.parse();
+            let parsed_bytes = parse(e.as_bytes());
+            assert_eq!(parsed_bytes, Ok((r.clone(), &[] as &[u8])), "B => {e:?}");
+            assert_eq!(parsed_str, Ok(r), "S => {e:?}");
         }
     }
 

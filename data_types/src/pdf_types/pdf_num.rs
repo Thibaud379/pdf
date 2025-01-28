@@ -1,6 +1,12 @@
+use core::str;
 use std::str::FromStr;
 
-use crate::pdf_error::{PdfError, PdfErrorKind};
+use crate::{
+    pdf_error::{PdfError, PdfErrorKind},
+    Parsable,
+};
+
+use super::WHITESPACES;
 
 #[derive(PartialEq, Debug)]
 pub enum PdfNumeric {
@@ -49,27 +55,41 @@ impl FromStr for PdfNumeric {
     }
 }
 
+impl Parsable for PdfNumeric {
+    fn from_bytes(b: &[u8]) -> Result<(Self, &[u8]), PdfError> {
+        let first_token = b
+            .split(|b| WHITESPACES.contains(b))
+            .next()
+            .ok_or_else(|| PdfError::with_kind(PdfErrorKind::ParseError))?;
+        let parsed = str::from_utf8(first_token)?.parse()?;
+        Ok((parsed, &b[first_token.len()..]))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parse;
 
     #[test]
-    fn parsing() {
+    fn parsing_str() {
         let err = Err(PdfError {
             kind: PdfErrorKind::ParseError,
         });
-        let test_data: [(&str, PdfNumeric); 11] = [
+        let test_data: [(&str, PdfNumeric); 13] = [
             ("123", 123.into()),
             ("43445", 43445.into()),
             ("+17", 17.into()),
             ("-98", (-98).into()),
             ("0", 0.into()),
+            ("00987", 987.into()),
             ("34.5", 34.5.into()),
             ("-3.62", (-3.62).into()),
             ("+123.6", 123.6.into()),
             ("4.", 4.0.into()),
             ("-.002", (-0.002).into()),
             ("0.0", 0.0.into()),
+            ("009.87", 9.87.into()),
         ];
 
         for (s, r) in test_data {
@@ -79,5 +99,49 @@ mod tests {
         for s in err_data {
             assert_eq!(s.parse::<PdfNumeric>(), err);
         }
+    }
+    #[test]
+    fn parsing_bytes() {
+        let err = Err(PdfError {
+            kind: PdfErrorKind::ParseError,
+        });
+        let test_data: [(&[u8], PdfNumeric); 13] = [
+            (b"123", 123.into()),
+            (b"43445", 43445.into()),
+            (b"+17", 17.into()),
+            (b"-98", (-98).into()),
+            (b"0", 0.into()),
+            (b"00987", 987.into()),
+            (b"34.5", 34.5.into()),
+            (b"-3.62", (-3.62).into()),
+            (b"+123.6", 123.6.into()),
+            (b"4.", 4.0.into()),
+            (b"-.002", (-0.002).into()),
+            (b"0.0", 0.0.into()),
+            (b"009.87", 9.87.into()),
+        ];
+
+        for (s, r) in test_data {
+            assert_eq!(parse(s), Ok((r, &[] as &[u8])));
+        }
+        let err_data: [&[u8]; 4] = [b"b", b"a", b"3.0e1", b"16#FFFE"];
+        for s in err_data {
+            assert_eq!(parse::<PdfNumeric>(s), err);
+        }
+    }
+    #[test]
+    fn parsing_rest() {
+        assert_eq!(
+            parse::<PdfNumeric>(b"123 d"),
+            Ok((123.into(), b" d" as &[u8]))
+        );
+        assert_eq!(
+            parse::<PdfNumeric>(b"123\n"),
+            Ok((123.into(), b"\n" as &[u8]))
+        );
+        assert_eq!(
+            parse::<PdfNumeric>(b"123 "),
+            Ok((123.into(), b" " as &[u8]))
+        );
     }
 }
