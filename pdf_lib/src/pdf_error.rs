@@ -5,7 +5,9 @@ pub type PdfResult<T> = std::result::Result<T, PdfError>;
 #[derive(PartialEq, Debug, Clone)]
 pub enum PdfErrorKind {
     ParseError,
+    WrongType,
     External(String),
+    MissingStreamLength,
 }
 #[allow(dead_code)]
 #[derive(PartialEq, Debug, Clone)]

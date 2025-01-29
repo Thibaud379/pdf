@@ -1,8 +1,8 @@
 use core::str;
 
 use crate::{
-    pdf_error::{PdfError, PdfErrorKind},
     Parsable,
+    pdf_error::{PdfError, PdfErrorKind},
 };
 
 use super::is_regular;
@@ -35,7 +35,8 @@ impl Parsable for PdfName {
                     if let [l, r, rrest @ ..] = rest {
                         if l.is_ascii_hexdigit() && r.is_ascii_hexdigit() {
                             rest = rrest;
-                            u8::from_str_radix(unsafe { str::from_utf8_unchecked(&[*l, *r]) }, 16)?
+                            let a = [*l, *r];
+                            u8::from_str_radix(unsafe { str::from_utf8_unchecked(&a) }, 16)?
                         } else {
                             return err;
                         }
@@ -98,7 +99,8 @@ mod tests {
         let parsed = parse("/Name]".as_bytes());
         assert_eq!(
             parsed,
-            Ok((PdfName::from_raw_bytes("Name".as_bytes()), &[b']'] as &[u8]))
+            Ok((PdfName::from_raw_bytes("Name".as_bytes()), &[b']']
+                as &[u8]))
         )
     }
 }

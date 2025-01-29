@@ -2,8 +2,8 @@ use core::str;
 use std::str::FromStr;
 
 use crate::{
-    pdf_error::{PdfError, PdfErrorKind},
     Parsable,
+    pdf_error::{PdfError, PdfErrorKind},
 };
 
 use super::WHITESPACES;
@@ -19,6 +19,14 @@ impl From<PdfNumeric> for i32 {
         match value {
             PdfNumeric::PdfInt(v) => v,
             PdfNumeric::PdfReal(f) => f as i32,
+        }
+    }
+}
+impl From<&PdfNumeric> for i32 {
+    fn from(value: &PdfNumeric) -> Self {
+        match value {
+            PdfNumeric::PdfInt(v) => *v,
+            PdfNumeric::PdfReal(f) => *f as i32,
         }
     }
 }

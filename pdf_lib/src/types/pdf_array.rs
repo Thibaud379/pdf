@@ -1,10 +1,9 @@
 use crate::{
-    parse,
+    Parsable, parse,
     pdf_error::{PdfError, PdfErrorKind},
-    Parsable,
 };
 
-use super::{strip_whitespace, PdfObject};
+use super::{PdfObject, strip_whitespace};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct PdfArray {
@@ -41,7 +40,7 @@ mod test {
 
     #[test]
     fn parsing() {
-        let examples = ["[549 3.14 true (Ralph) /SomeName null ]"];
+        let examples = ["[549 3.14 true (Ralph) /SomeName null 12 0 obj <FF> endobj]"];
         let expected = [PdfArray {
             data: vec![
                 PdfNumeric::PdfInt(549).into(),
@@ -50,6 +49,7 @@ mod test {
                 PdfString::from_raw_bytes(b"Ralph").into(),
                 PdfName::from_raw_bytes(b"SomeName").into(),
                 None.into(),
+                PdfString::from_raw_bytes(&[0xff]).as_indirect_raw(12, 0),
             ],
         }];
 
