@@ -38,7 +38,7 @@ impl Parsable for bool {
             0 => Some(r),
             _ => WHITESPACES.contains(&r.1[0]).then_some(r),
         })
-        .ok_or_else(|| PdfError {
+        .ok_or(PdfError {
             kind: PdfErrorKind::ParseError,
         })
     }
@@ -50,7 +50,7 @@ struct Whitespace {
 impl Parsable for Whitespace {
     fn from_bytes(mut bytes: &[u8]) -> Result<(Self, &[u8]), PdfError> {
         let mut data = Vec::new();
-        while bytes.get(0).is_some_and(|b| WHITESPACES.contains(b)) {
+        while bytes.first().is_some_and(|b| WHITESPACES.contains(b)) {
             data.push(bytes[0]);
             bytes = &bytes[1..];
         }
@@ -63,7 +63,7 @@ fn strip_whitespace(bytes: &[u8]) -> &[u8] {
 }
 
 fn next_eol(mut bytes: &[u8]) -> &[u8] {
-    while bytes.get(0).is_some_and(|b| !EOLS.contains(b)) {
+    while bytes.first().is_some_and(|b| !EOLS.contains(b)) {
         bytes = &bytes[1..];
     }
     match bytes {
@@ -91,12 +91,12 @@ mod tests {
         let expected = [(true, 4), (false, 5), (false, 5)];
         for (bytes, (res, rest)) in valid.into_iter().zip(expected) {
             let parsed = parse(bytes);
-            assert_eq!(parsed, Ok((res, &bytes[rest..])))
+            assert_eq!(parsed, Ok((res, &bytes[rest..])));
         }
 
         let invalid: [&[u8]; 3] = [b"True", b"fal se", b"false\\"];
         for bytes in invalid {
-            assert!(parse::<bool>(bytes).is_err())
+            assert!(parse::<bool>(bytes).is_err());
         }
     }
     #[test]

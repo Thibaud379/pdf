@@ -136,9 +136,9 @@ impl FromStr for PdfCrossRefTableEntry {
             items[1].parse().map_err(|_e| PdfError {
                 kind: PdfErrorKind::ParseError,
             })?,
-            match items[2] {
-                "f" => Ok(true),
-                "n" => Ok(false),
+            match items.get(2) {
+                Some(&"f") => Ok(true),
+                Some(&"n") => Ok(false),
                 _ => Err(PdfError {
                     kind: PdfErrorKind::ParseError,
                 }),

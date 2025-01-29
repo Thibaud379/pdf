@@ -13,15 +13,12 @@ pub struct PdfHeader {
 }
 impl PdfHeader {
     pub fn with_verion(version: PdfVersion, binary_marker: bool) -> Result<Self, PdfError> {
-        match (version.major, version.minor) {
-            (1, 0..=7) | (2, 0) => true,
-            _ => false,
-        }
-        .then(|| Self {
-            version,
-            binary_marker,
-        })
-        .ok_or_else(|| PdfError::with_kind(PdfErrorKind::ParseError))
+        matches!((version.major, version.minor), (1, 0..=7) | (2, 0))
+            .then_some(Self {
+                version,
+                binary_marker,
+            })
+            .ok_or_else(|| PdfError::with_kind(PdfErrorKind::ParseError))
     }
 }
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
@@ -81,7 +78,7 @@ impl Parsable for PdfHeader {
 
             Ok((header, bytes))
         } else {
-            return Err(PdfError::with_kind(PdfErrorKind::ParseError));
+            Err(PdfError::with_kind(PdfErrorKind::ParseError))
         }
     }
 }

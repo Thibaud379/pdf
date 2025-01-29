@@ -14,7 +14,7 @@ pub struct PdfString {
 impl PdfString {
     pub fn from_bytes(bytes: &[u8]) -> Self {
         Self {
-            data: Vec::from_iter(bytes.iter().copied()),
+            data: bytes.iter().copied().collect(),
         }
     }
 
@@ -165,6 +165,7 @@ impl PdfString {
                     let l = *p[0];
                     let r = *p.get(1).copied().unwrap_or(&b'0');
                     if l.is_ascii_hexdigit() && r.is_ascii_hexdigit() {
+                        #[allow(clippy::cast_possible_truncation)]
                         Ok(((l as char).to_digit(16).unwrap() * 16
                             + (r as char).to_digit(16).unwrap()) as u8)
                     } else {
@@ -284,7 +285,7 @@ impl FromStr for PdfString {
 
 impl Parsable for PdfString {
     fn from_bytes(b: &[u8]) -> Result<(Self, &[u8]), PdfError> {
-        match b.get(0) {
+        match b.first() {
             Some(b'<') => Self::from_bytes_hexa(b),
             Some(b'(') => Self::from_bytes_literal(b),
             _ => Err(PdfError {
