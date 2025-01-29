@@ -1,4 +1,4 @@
-use pdf_types::{PdfName, PdfNumeric, PdfString, WHITESPACES};
+use pdf_types::{PdfName, PdfNumeric, PdfString, EOLS, WHITESPACES};
 
 use crate::pdf_error::{PdfError, PdfErrorKind};
 
@@ -26,13 +26,13 @@ where
 }
 
 impl Parsable for bool {
-    fn from_bytes(b: &[u8]) -> Result<(Self, &[u8]), PdfError> {
-        match b.len() {
+    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), PdfError> {
+        match bytes.len() {
             ..4 => None,
-            4 => (b == b"true").then_some((true, &b[4..4])),
-            5.. => (&b[..5] == b"false")
-                .then_some((false, &b[5..]))
-                .or_else(|| (&b[..4] == b"true").then_some((true, &b[3..]))),
+            4 => (bytes == b"true").then_some((true, &bytes[4..4])),
+            5.. => (&bytes[..5] == b"false")
+                .then_some((false, &bytes[5..]))
+                .or_else(|| (&bytes[..4] == b"true").then_some((true, &bytes[3..]))),
         }
         .and_then(|r| match r.1.len() {
             0 => Some(r),
@@ -41,6 +41,35 @@ impl Parsable for bool {
         .ok_or_else(|| PdfError {
             kind: PdfErrorKind::ParseError,
         })
+    }
+}
+
+struct Whitespace {
+    _bytes: Vec<u8>,
+}
+impl Parsable for Whitespace {
+    fn from_bytes(mut bytes: &[u8]) -> Result<(Self, &[u8]), PdfError> {
+        let mut data = Vec::new();
+        while bytes.get(0).is_some_and(|b| WHITESPACES.contains(b)) {
+            data.push(bytes[0]);
+            bytes = &bytes[1..];
+        }
+        Ok((Self { _bytes: data }, bytes))
+    }
+}
+
+fn strip_whitespace(bytes: &[u8]) -> &[u8] {
+    parse::<Whitespace>(bytes).unwrap().1
+}
+
+fn next_eol(mut bytes: &[u8]) -> &[u8] {
+    while bytes.get(0).is_some_and(|b| !EOLS.contains(b)) {
+        bytes = &bytes[1..];
+    }
+    match bytes {
+        [b'\r', b'\n', ..] => &bytes[2..],
+        [_b, ..] => &bytes[1..],
+        [] => bytes,
     }
 }
 

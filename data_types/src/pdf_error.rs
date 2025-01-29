@@ -1,4 +1,4 @@
-use std::{error::Error, fmt::Display};
+use std::error::Error;
 
 #[allow(dead_code)]
 pub type PdfResult<T> = std::result::Result<T, PdfError>;
