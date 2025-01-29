@@ -8,7 +8,7 @@ use crate::{
 
 use super::WHITESPACES;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum PdfNumeric {
     PdfInt(i32),
     PdfReal(f32),
@@ -142,6 +142,10 @@ mod tests {
         assert_eq!(
             parse::<PdfNumeric>(b"123 "),
             Ok((123.into(), b" " as &[u8]))
+        );
+        assert_eq!(
+            parse::<PdfNumeric>(b"0.4\n/"),
+            Ok((0.4.into(), b"\n/" as &[u8]))
         );
     }
 }

@@ -1,10 +1,66 @@
+mod parsable;
+mod pdf_array;
+mod pdf_dict;
 mod pdf_name;
+mod pdf_null;
 mod pdf_num;
 mod pdf_str;
+mod pdf_stream;
 
+pub use parsable::*;
+pub use pdf_array::*;
+pub use pdf_dict::*;
 pub use pdf_name::*;
+pub use pdf_null::*;
 pub use pdf_num::*;
 pub use pdf_str::*;
+pub use pdf_stream::*;
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct IndirectData {}
+#[derive(Debug, PartialEq, Clone)]
+pub struct PdfObject {
+    kind: PdfObjectKind,
+    indirect: Option<IndirectData>,
+}
+#[derive(Debug, PartialEq, Clone)]
+pub enum PdfObjectKind {
+    Boolean(bool),
+    Number(PdfNumeric),
+    String(PdfString),
+    Name(PdfName),
+    Array(PdfArray),
+    Dict(PdfDict),
+    Stream(PdfStream),
+    Null(PdfNull),
+}
+
+macro_rules! from_impl {
+    ($F:tt,$Var:tt) => {
+        impl From<$F> for PdfObjectKind {
+            fn from(value: $F) -> Self {
+                Self::$Var(value)
+            }
+        }
+        impl From<$F> for PdfObject {
+            fn from(value: $F) -> Self {
+                Self {
+                    kind: value.into(),
+                    indirect: None,
+                }
+            }
+        }
+    };
+}
+
+from_impl!(bool, Boolean); //
+from_impl!(PdfNumeric, Number);
+from_impl!(PdfString, String); //
+from_impl!(PdfName, Name); //
+from_impl!(PdfArray, Array); //
+from_impl!(PdfDict, Dict); //
+from_impl!(PdfStream, Stream); //
+from_impl!(PdfNull, Null); //
 
 pub(crate) const WHITESPACES: [u8; 6] = *b"\x00\t\n\x0c\r ";
 pub(crate) const EOLS: [u8; 2] = [b'\n', b'\r'];

@@ -12,7 +12,7 @@ pub struct PdfString {
 }
 
 impl PdfString {
-    pub fn from_bytes(bytes: &[u8]) -> Self {
+    pub fn from_raw_bytes(bytes: &[u8]) -> Self {
         Self {
             data: bytes.iter().copied().collect(),
         }
@@ -302,10 +302,10 @@ mod tests {
     fn hexa() {
         let examples: [&str; 4] = ["<901FA3>", "<901FA>", "<901 FA>", "<90\n\t1FA>"];
         let expected = [
-            PdfString::from_bytes(&[0x90, 0x1F, 0xA3]),
-            PdfString::from_bytes(&[0x90, 0x1F, 0xA0]),
-            PdfString::from_bytes(&[0x90, 0x1F, 0xA0]),
-            PdfString::from_bytes(&[0x90, 0x1F, 0xA0]),
+            PdfString::from_raw_bytes(&[0x90, 0x1F, 0xA3]),
+            PdfString::from_raw_bytes(&[0x90, 0x1F, 0xA0]),
+            PdfString::from_raw_bytes(&[0x90, 0x1F, 0xA0]),
+            PdfString::from_raw_bytes(&[0x90, 0x1F, 0xA0]),
         ];
 
         for (r, s) in expected.into_iter().zip(examples) {
@@ -330,20 +330,30 @@ mod tests {
             "(\\53)",
             "(\\53a)",
             "(\\5a)",
+            "(a\nb)",
+            "(a\rb)",
+            "(a\r\nb)",
+            "(a\\\nb)",
+            "(a\\\r\nb)",
         ];
         let expected = [
-            PdfString::from_bytes(b"string"),
-            PdfString::from_bytes(b"new\nline"),
-            PdfString::from_bytes(b"p(a)r(s)c(a(n)b)e(used)"),
-            PdfString::from_bytes(b"*!&}^%"),
-            PdfString::from_bytes(b""),
-            PdfString::from_bytes(b")"),
-            PdfString::from_bytes(&[b'a', 0o245, b'a', 0o307]),
-            PdfString::from_bytes(&[0o5, b'3']),
-            PdfString::from_bytes(&[0o53]),
-            PdfString::from_bytes(&[0o53]),
-            PdfString::from_bytes(&[0o53, b'a']),
-            PdfString::from_bytes(&[0o5, b'a']),
+            PdfString::from_raw_bytes(b"string"),
+            PdfString::from_raw_bytes(b"new\nline"),
+            PdfString::from_raw_bytes(b"p(a)r(s)c(a(n)b)e(used)"),
+            PdfString::from_raw_bytes(b"*!&}^%"),
+            PdfString::from_raw_bytes(b""),
+            PdfString::from_raw_bytes(b")"),
+            PdfString::from_raw_bytes(&[b'a', 0o245, b'a', 0o307]),
+            PdfString::from_raw_bytes(&[0o5, b'3']),
+            PdfString::from_raw_bytes(&[0o53]),
+            PdfString::from_raw_bytes(&[0o53]),
+            PdfString::from_raw_bytes(&[0o53, b'a']),
+            PdfString::from_raw_bytes(&[0o5, b'a']),
+            PdfString::from_raw_bytes(b"a\nb"),
+            PdfString::from_raw_bytes(b"a\nb"),
+            PdfString::from_raw_bytes(b"a\nb"),
+            PdfString::from_raw_bytes(b"ab"),
+            PdfString::from_raw_bytes(b"ab"),
         ];
 
         for (e, r) in examples.into_iter().zip(expected) {
@@ -351,43 +361,6 @@ mod tests {
             let parsed_bytes = parse(e.as_bytes());
             assert_eq!(parsed_bytes, Ok((r.clone(), &[] as &[u8])), "B => {e:?}");
             assert_eq!(parsed_str, Ok(r), "S => {e:?}");
-        }
-    }
-
-    #[test]
-    fn literal_escaping() {
-        let examples = [r"(a\245a\307)", r"(\0053)", r"(\053)", r"(\53)"];
-        let expected = [
-            PdfString::from_bytes(&[b'a', 0o245, b'a', 0o307]),
-            PdfString::from_bytes(&[0o5, b'3']),
-            PdfString::from_bytes(&[0o53]),
-            PdfString::from_bytes(&[0o53]),
-        ];
-
-        for (s, r) in examples.iter().zip(expected) {
-            let parsed = s.parse();
-            assert_eq!(parsed, Ok(r));
-        }
-    }
-
-    #[test]
-    fn literal_eol() {
-        let examples = ["(a\nb)", "(a\rb)", "(a\r\nb)"];
-        let expected = PdfString::from_bytes(vec![b'a', b'\n', b'b'].as_slice());
-
-        for s in examples {
-            let parsed = s.parse();
-            assert_eq!(parsed, Ok(expected.clone()), "{s}");
-        }
-    }
-    #[test]
-    fn literal_line_split() {
-        let examples = ["(a\\\nb)", "(a\\\r\nb)"];
-        let expected = PdfString::from_bytes(vec![b'a', b'b'].as_slice());
-
-        for s in examples {
-            let parsed = s.parse();
-            assert_eq!(parsed, Ok(expected.clone()), "{s}");
         }
     }
 }
