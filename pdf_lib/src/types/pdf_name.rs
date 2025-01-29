@@ -55,7 +55,7 @@ impl Parsable for PdfName {
 
 #[cfg(test)]
 mod tests {
-    use crate::{parse, pdf_types::PdfName};
+    use crate::{parse, types::PdfName};
 
     #[test]
     fn parsing() {

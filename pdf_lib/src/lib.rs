@@ -2,10 +2,10 @@ use crate::pdf_error::{PdfError, PdfErrorKind};
 
 mod pdf_error;
 mod pdf_file;
-mod pdf_types;
+mod types;
 
 pub use pdf_file::PdfFile;
-pub use pdf_types::*;
+pub use types::*;
 
 #[allow(dead_code)]
 mod pdf_constants {

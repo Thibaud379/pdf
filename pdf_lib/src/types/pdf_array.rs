@@ -34,7 +34,7 @@ impl Parsable for PdfArray {
 mod test {
     use crate::{
         parse,
-        pdf_types::{PdfName, PdfNumeric, PdfString},
+        types::{PdfName, PdfNumeric, PdfString},
     };
 
     use super::PdfArray;

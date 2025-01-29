@@ -35,13 +35,11 @@ impl Parsable for PdfDict {
         let mut bytes = strip_whitespace(bytes);
         let mut data = HashMap::new();
         while !bytes.is_empty() && !matches!(bytes, [b'>', b'>', ..]) {
-            // println!("{bytes:?}\n\t{data:?}");
             let (key, key_bytes) = parse(bytes)?;
             let key_bytes = strip_whitespace(key_bytes);
-            // println!("\t{key:?}");
             let (value, value_bytes) = parse(key_bytes)?;
             let value_bytes = strip_whitespace(value_bytes);
-            // println!("\t{value:?}\n");
+
             data.insert(key, value);
             bytes = value_bytes;
         }
@@ -63,7 +61,7 @@ mod tests {
 
     use crate::{
         parse,
-        pdf_types::{PdfName, PdfNumeric, PdfString},
+        types::{PdfName, PdfNumeric, PdfString},
     };
 
     use super::PdfDict;
