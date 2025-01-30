@@ -6,6 +6,7 @@ pub type PdfResult<T> = std::result::Result<T, PdfError>;
 pub enum PdfErrorKind {
     ParseError,
     WrongType,
+    InvalidData,
     External(String),
     MissingStreamLength,
 }

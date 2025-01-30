@@ -1,5 +1,6 @@
 use crate::pdf_error::{PdfError, PdfErrorKind};
 
+mod filter;
 mod pdf_error;
 mod pdf_file;
 mod types;

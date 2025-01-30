@@ -15,6 +15,10 @@ impl PdfName {
     pub fn from_raw_bytes(bytes: &[u8]) -> Self {
         Self { data: bytes.into() }
     }
+
+    pub fn bytes(&self) -> &[u8] {
+        &self.data
+    }
 }
 
 impl Parsable for PdfName {
