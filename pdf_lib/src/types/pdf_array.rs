@@ -13,7 +13,7 @@ pub struct PdfArray {
 impl Parsable for PdfArray {
     fn from_bytes(mut bytes: &[u8]) -> Result<(Self, &[u8]), crate::pdf_error::PdfError> {
         if !matches!(bytes.get(0), Some(b'[')) {
-            return Err(PdfError::with_kind(PdfErrorKind::ParseError));
+            return Err(PdfError::with_kind(PdfErrorKind::Parse));
         }
         bytes = &bytes[1..];
         let mut data = Vec::new();
@@ -22,7 +22,7 @@ impl Parsable for PdfArray {
             bytes = strip_whitespace(b);
         }
         if !matches!(bytes.get(0), Some(b']')) {
-            return Err(PdfError::with_kind(PdfErrorKind::ParseError));
+            return Err(PdfError::with_kind(PdfErrorKind::Parse));
         }
         bytes = &bytes[1..];
         Ok((Self { data }, bytes))

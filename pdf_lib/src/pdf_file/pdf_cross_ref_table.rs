@@ -54,7 +54,7 @@ impl FromStr for PdfCrossRefTableSection {
             .is_none_or(|k| k != super::constants::CROSS_REF_SECTION_KEYWORD)
         {
             return Err(PdfError {
-                kind: PdfErrorKind::ParseError,
+                kind: PdfErrorKind::Parse,
             });
         }
         for line in lines {
@@ -70,12 +70,12 @@ impl FromStr for PdfCrossRefTableSection {
             }
             let Some(ss) = &mut subsection else {
                 Err(PdfError {
-                    kind: PdfErrorKind::ParseError,
+                    kind: PdfErrorKind::Parse,
                 })?
             };
             let Ok(entry) = line.parse() else {
                 Err(PdfError {
-                    kind: PdfErrorKind::ParseError,
+                    kind: PdfErrorKind::Parse,
                 })?
             };
             ss.entries.push(entry);
@@ -96,11 +96,11 @@ impl FromStr for PdfCrossRefTableSubsectionHeader {
             .map(str::parse)
             .collect::<Result<_, _>>()
             .map_err(|_e| PdfError {
-                kind: PdfErrorKind::ParseError,
+                kind: PdfErrorKind::Parse,
             })?;
         if items.len() != 2 {
             return Err(PdfError {
-                kind: PdfErrorKind::ParseError,
+                kind: PdfErrorKind::Parse,
             });
         }
 
@@ -117,7 +117,7 @@ impl FromStr for PdfCrossRefTableEntry {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.len() != 18 {
             return Err(PdfError {
-                kind: PdfErrorKind::ParseError,
+                kind: PdfErrorKind::Parse,
             });
         }
         let items: Vec<_> = [s.get(..10), s.get(11..16), s.get(17..18)]
@@ -126,21 +126,21 @@ impl FromStr for PdfCrossRefTableEntry {
             .collect();
         if items.len() != 3 {
             return Err(PdfError {
-                kind: PdfErrorKind::ParseError,
+                kind: PdfErrorKind::Parse,
             });
         }
         let (offset, gen_number, free) = (
             items[0].parse().map_err(|_e| PdfError {
-                kind: PdfErrorKind::ParseError,
+                kind: PdfErrorKind::Parse,
             })?,
             items[1].parse().map_err(|_e| PdfError {
-                kind: PdfErrorKind::ParseError,
+                kind: PdfErrorKind::Parse,
             })?,
             match items.get(2) {
                 Some(&"f") => Ok(true),
                 Some(&"n") => Ok(false),
                 _ => Err(PdfError {
-                    kind: PdfErrorKind::ParseError,
+                    kind: PdfErrorKind::Parse,
                 }),
             }?,
         );

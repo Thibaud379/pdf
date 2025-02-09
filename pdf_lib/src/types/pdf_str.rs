@@ -26,7 +26,7 @@ impl PdfString {
         let last = s.get((s.len() - 1)..);
         if !last.is_some_and(|s| s.starts_with(')')) {
             return Err(PdfError {
-                kind: PdfErrorKind::ParseError,
+                kind: PdfErrorKind::Parse,
             });
         }
 
@@ -39,7 +39,7 @@ impl PdfString {
                     }
                     b')' => {
                         pars = pars.checked_sub(1).ok_or(PdfError {
-                            kind: PdfErrorKind::ParseError,
+                            kind: PdfErrorKind::Parse,
                         })?;
                         b
                     }
@@ -65,7 +65,7 @@ impl PdfString {
                     (3, true) | (_, false) => {
                         let Ok(code_value) = u8::from_str_radix(&code, 8) else {
                             return Err(PdfError {
-                                kind: PdfErrorKind::ParseError,
+                                kind: PdfErrorKind::Parse,
                             });
                         };
                         data.push(code_value);
@@ -98,7 +98,7 @@ impl PdfString {
         if solidus && !code.is_empty() {
             let Ok(code_value) = u8::from_str_radix(&code, 8) else {
                 return Err(PdfError {
-                    kind: PdfErrorKind::ParseError,
+                    kind: PdfErrorKind::Parse,
                 });
             };
             data.push(code_value);
@@ -112,7 +112,7 @@ impl PdfString {
             Ok(Self { data })
         } else {
             Err(PdfError {
-                kind: PdfErrorKind::ParseError,
+                kind: PdfErrorKind::Parse,
             })
         }
     }
@@ -121,7 +121,7 @@ impl PdfString {
         let last = s.get((s.len() - 1)..);
         if !last.is_some_and(|s| s.starts_with('>')) {
             return Err(PdfError {
-                kind: PdfErrorKind::ParseError,
+                kind: PdfErrorKind::Parse,
             });
         }
         s = &s[1..(s.len() - 1)];
@@ -146,7 +146,7 @@ impl PdfString {
     }
 
     fn from_bytes_hexa(bytes: &[u8]) -> Result<(PdfString, &[u8]), PdfError> {
-        let e = Err(PdfError::with_kind(PdfErrorKind::ParseError));
+        let e = Err(PdfError::with_kind(PdfErrorKind::Parse));
         let Some(right_bracket) = bytes.iter().position(|b| *b == b'>') else {
             return e;
         };
@@ -169,7 +169,7 @@ impl PdfString {
                         Ok(((l as char).to_digit(16).unwrap() * 16
                             + (r as char).to_digit(16).unwrap()) as u8)
                     } else {
-                        Err(PdfError::with_kind(PdfErrorKind::ParseError))
+                        Err(PdfError::with_kind(PdfErrorKind::Parse))
                     }
                 })
                 .collect::<Result<Vec<_>, _>>()?;
@@ -277,7 +277,7 @@ impl FromStr for PdfString {
             Some('<') => Self::from_str_hexa(s),
             Some('(') => Self::from_str_literal(s),
             _ => Err(PdfError {
-                kind: PdfErrorKind::ParseError,
+                kind: PdfErrorKind::Parse,
             }),
         }
     }
@@ -289,7 +289,7 @@ impl Parsable for PdfString {
             Some(b'<') => Self::from_bytes_hexa(b),
             Some(b'(') => Self::from_bytes_literal(b),
             _ => Err(PdfError {
-                kind: PdfErrorKind::ParseError,
+                kind: PdfErrorKind::Parse,
             }),
         }
     }

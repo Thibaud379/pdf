@@ -23,7 +23,7 @@ impl PdfName {
 
 impl Parsable for PdfName {
     fn from_bytes(mut bytes: &[u8]) -> Result<(Self, &[u8]), crate::pdf_error::PdfError> {
-        let err = Err(PdfError::with_kind(PdfErrorKind::ParseError));
+        let err = Err(PdfError::with_kind(PdfErrorKind::Parse));
         if !matches!(bytes.get(0), Some(b'/')) {
             return err;
         }
@@ -33,7 +33,7 @@ impl Parsable for PdfName {
             let mut rest = rest;
             let n = match *byte {
                 0 => {
-                    return Err(PdfError::with_kind(PdfErrorKind::ParseError));
+                    return Err(PdfError::with_kind(PdfErrorKind::Parse));
                 }
                 b'#' => {
                     if let [l, r, rrest @ ..] = rest {

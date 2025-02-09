@@ -49,7 +49,7 @@ impl Parsable for bool {
             _ => WHITESPACES.contains(&r.1[0]).then_some(r),
         })
         .ok_or(PdfError {
-            kind: PdfErrorKind::ParseError,
+            kind: PdfErrorKind::Parse,
         })
     }
 }
@@ -69,7 +69,7 @@ impl Parsable for Whitespace {
 }
 
 pub(crate) fn parse_indirect(mut bytes: &[u8]) -> Result<(PdfObject, &[u8]), PdfError> {
-    let e = Err(PdfError::with_kind(PdfErrorKind::ParseError));
+    let e = Err(PdfError::with_kind(PdfErrorKind::Parse));
     let Some(first_space) = bytes.iter().position(|b| WHITESPACES.contains(b)) else {
         e?
     };
@@ -85,6 +85,15 @@ pub(crate) fn parse_indirect(mut bytes: &[u8]) -> Result<(PdfObject, &[u8]), Pdf
     };
     bytes = strip_whitespace(&bytes[first_space..]);
     if !bytes.starts_with(b"obj") {
+        if bytes[0] == b'R' {
+            return Ok((
+                PdfObject {
+                    kind: PdfObjectKind::Ref,
+                    indirect: Some(indirect),
+                },
+                &bytes[1..],
+            ));
+        }
         e?
     }
     bytes = strip_whitespace(&bytes[3..]);

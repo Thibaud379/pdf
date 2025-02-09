@@ -52,12 +52,12 @@ impl FromStr for PdfNumeric {
                 Ok(Self::PdfReal(p))
             } else {
                 Err(PdfError {
-                    kind: PdfErrorKind::ParseError,
+                    kind: PdfErrorKind::Parse,
                 })
             }
         } else {
             Err(PdfError {
-                kind: PdfErrorKind::ParseError,
+                kind: PdfErrorKind::Parse,
             })
         }
     }
@@ -68,7 +68,7 @@ impl Parsable for PdfNumeric {
         let first_token = b
             .split(|b| WHITESPACES.contains(b))
             .next()
-            .ok_or_else(|| PdfError::with_kind(PdfErrorKind::ParseError))?;
+            .ok_or_else(|| PdfError::with_kind(PdfErrorKind::Parse))?;
         let parsed = str::from_utf8(first_token)?.parse()?;
         Ok((parsed, &b[first_token.len()..]))
     }
@@ -82,7 +82,7 @@ mod tests {
     #[test]
     fn parsing_str() {
         let err = Err(PdfError {
-            kind: PdfErrorKind::ParseError,
+            kind: PdfErrorKind::Parse,
         });
         let test_data: [(&str, PdfNumeric); 13] = [
             ("123", 123.into()),
@@ -111,7 +111,7 @@ mod tests {
     #[test]
     fn parsing_bytes() {
         let err = Err(PdfError {
-            kind: PdfErrorKind::ParseError,
+            kind: PdfErrorKind::Parse,
         });
         let test_data: [(&[u8], PdfNumeric); 13] = [
             (b"123", 123.into()),

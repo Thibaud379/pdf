@@ -38,6 +38,7 @@ pub enum PdfObjectKind {
     Dict(PdfDict),
     Stream(PdfStream),
     Null(PdfNull),
+    Ref,
 }
 
 macro_rules! from_impl {

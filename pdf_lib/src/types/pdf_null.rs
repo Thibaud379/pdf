@@ -11,7 +11,7 @@ impl Parsable for PdfNull {
             let bytes = strip_whitespace(&bytes[4..]);
             Ok((Self {}, bytes))
         } else {
-            Err(PdfError::with_kind(PdfErrorKind::ParseError))
+            Err(PdfError::with_kind(PdfErrorKind::Parse))
         }
     }
 }

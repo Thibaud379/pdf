@@ -1,7 +1,7 @@
 use crate::{
-    next_eol,
+    Parsable, next_eol,
     pdf_error::{PdfError, PdfErrorKind},
-    strip_whitespace, Parsable,
+    strip_whitespace,
 };
 
 use std::{char::REPLACEMENT_CHARACTER, fmt::Display};
@@ -18,7 +18,7 @@ impl PdfHeader {
                 version,
                 binary_marker,
             })
-            .ok_or_else(|| PdfError::with_kind(PdfErrorKind::ParseError))
+            .ok_or_else(|| PdfError::with_kind(PdfErrorKind::Parse))
     }
 }
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
@@ -46,11 +46,11 @@ impl Display for PdfHeader {
 impl Parsable for PdfHeader {
     fn from_bytes(mut bytes: &[u8]) -> Result<(Self, &[u8]), crate::pdf_error::PdfError> {
         if !bytes.starts_with(b"%PDF-") {
-            return Err(PdfError::with_kind(PdfErrorKind::ParseError));
+            return Err(PdfError::with_kind(PdfErrorKind::Parse));
         };
         bytes = &bytes[5..];
         if bytes.len() < 3 {
-            return Err(PdfError::with_kind(PdfErrorKind::ParseError));
+            return Err(PdfError::with_kind(PdfErrorKind::Parse));
         }
         let major = (bytes[0] as char)
             .to_digit(10)
@@ -78,7 +78,7 @@ impl Parsable for PdfHeader {
 
             Ok((header, bytes))
         } else {
-            Err(PdfError::with_kind(PdfErrorKind::ParseError))
+            Err(PdfError::with_kind(PdfErrorKind::Parse))
         }
     }
 }
@@ -124,7 +124,7 @@ mod tests {
                 version: PdfVersion { major: 1, minor: 0 },
                 binary_marker: false,
             }),
-            Err(PdfError::with_kind(PdfErrorKind::ParseError)),
+            Err(PdfError::with_kind(PdfErrorKind::Parse)),
         ];
 
         for (s, e) in examples.into_iter().zip(expected) {

@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use crate::{
-    parse,
+    Parsable, parse,
     pdf_error::{PdfError, PdfErrorKind},
-    strip_whitespace, Parsable,
+    strip_whitespace,
 };
 
 use super::{PdfName, PdfNull, PdfObject};
@@ -14,10 +14,16 @@ pub struct PdfDict {
 }
 
 impl PdfDict {
-    pub const NULL: PdfObject = PdfObject {
+    const NULL: PdfObject = PdfObject {
         kind: super::PdfObjectKind::Null(PdfNull {}),
         indirect: None,
     };
+
+    pub fn empty() -> Self {
+        PdfDict {
+            data: HashMap::new(),
+        }
+    }
     pub fn get(&self, key: &PdfName) -> Option<&PdfObject> {
         self.data.get(key)
     }
@@ -30,7 +36,7 @@ impl PdfDict {
 impl Parsable for PdfDict {
     fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), PdfError> {
         let [b'<', b'<', bytes @ ..] = bytes else {
-            return Err(PdfError::with_kind(PdfErrorKind::ParseError));
+            return Err(PdfError::with_kind(PdfErrorKind::Parse));
         };
         let mut bytes = strip_whitespace(bytes);
         let mut data = HashMap::new();
@@ -45,7 +51,7 @@ impl Parsable for PdfDict {
         }
 
         if !matches!(bytes, [b'>', b'>', ..]) {
-            return Err(PdfError::with_kind(PdfErrorKind::ParseError));
+            return Err(PdfError::with_kind(PdfErrorKind::Parse));
         }
 
         bytes = strip_whitespace(&bytes[2..]);
