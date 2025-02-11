@@ -1,7 +1,7 @@
 use core::str;
 use std::str::FromStr;
 
-use crate::{Parsable, PdfError, PdfErrorKind};
+use crate::{Parsable, pdf_error::*};
 
 use super::{EOLS, WHITESPACES};
 
@@ -18,7 +18,7 @@ impl PdfString {
         }
     }
 
-    fn from_str_literal(s: &str) -> Result<Self, PdfError> {
+    fn from_str_literal(s: &str) -> PdfResult<Self> {
         let mut pars: usize = 0;
         let mut data = Vec::new();
         let mut solidus = false;
@@ -116,7 +116,7 @@ impl PdfString {
             })
         }
     }
-    fn from_str_hexa(mut s: &str) -> Result<Self, PdfError> {
+    fn from_str_hexa(mut s: &str) -> PdfResult<Self> {
         let mut data = Vec::new();
         let last = s.get((s.len() - 1)..);
         if !last.is_some_and(|s| s.starts_with('>')) {
@@ -145,7 +145,7 @@ impl PdfString {
         self.data.len()
     }
 
-    fn from_bytes_hexa(bytes: &[u8]) -> Result<(PdfString, &[u8]), PdfError> {
+    fn from_bytes_hexa(bytes: &[u8]) -> PdfResult<(PdfString, &[u8])> {
         let e = Err(PdfError::with_kind(PdfErrorKind::Parse));
         let Some(right_bracket) = bytes.iter().position(|b| *b == b'>') else {
             return e;
@@ -177,7 +177,7 @@ impl PdfString {
         Ok((Self { data }, rest))
     }
 
-    fn from_bytes_literal(mut bytes: &[u8]) -> Result<(PdfString, &[u8]), PdfError> {
+    fn from_bytes_literal(mut bytes: &[u8]) -> PdfResult<(PdfString, &[u8])> {
         let mut data = Vec::new();
         let mut pars = 1;
         bytes = &bytes[1..];
@@ -218,11 +218,7 @@ impl PdfString {
                             (b'(', _) => b'(',
                             (b, r) if EOLS.contains(&b) => {
                                 bytes = if b == b'\r' {
-                                    if let [b'\n', rr @ ..] = r {
-                                        rr
-                                    } else {
-                                        r
-                                    }
+                                    if let [b'\n', rr @ ..] = r { rr } else { r }
                                 } else {
                                     r
                                 };
@@ -284,7 +280,7 @@ impl FromStr for PdfString {
 }
 
 impl Parsable for PdfString {
-    fn from_bytes(b: &[u8]) -> Result<(Self, &[u8]), PdfError> {
+    fn from_bytes(b: &[u8]) -> PdfResult<(Self, &[u8])> {
         match b.first() {
             Some(b'<') => Self::from_bytes_hexa(b),
             Some(b'(') => Self::from_bytes_literal(b),
@@ -296,7 +292,7 @@ impl Parsable for PdfString {
 }
 #[cfg(test)]
 mod tests {
-    use crate::{parse, PdfString};
+    use crate::{PdfString, parse};
 
     #[test]
     fn hexa() {

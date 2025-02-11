@@ -63,14 +63,14 @@ filter_impl!(PdfFilter,
 );
 
 impl PdfFilter {
-    pub fn encode<'a, I: IntoIterator<Item = Result<u8, PdfError>>>(
+    pub fn encode<'a, I: IntoIterator<Item = PdfResult<u8>>>(
         &self,
         bytes: I,
         filter_params: &'a PdfDict,
     ) -> Filtered<'a, I::IntoIter> {
         let data = match self {
-            PdfFilter::ASCIIHex => FilteredData::Temp(None),
-            PdfFilter::ASCII85 => todo!(),
+            PdfFilter::ASCIIHex => FilteredData::Temp(Vec::new()),
+            PdfFilter::ASCII85 => FilteredData::Temp(Vec::new()),
             PdfFilter::LZW => todo!(),
             PdfFilter::Flate => todo!(),
             PdfFilter::RunLength => todo!(),
@@ -89,7 +89,7 @@ impl PdfFilter {
         }
     }
 
-    pub fn decode<'a, I: IntoIterator<Item = Result<u8, PdfError>>>(
+    pub fn decode<'a, I: IntoIterator<Item = PdfResult<u8>>>(
         &self,
         bytes: I,
         filter_params: &'a PdfDict,
@@ -115,6 +115,7 @@ impl PdfFilter {
         }
     }
 }
+
 #[derive(Clone, PartialEq, Debug)]
 pub enum FilterError {
     ASCIIHexDecode(u8),
@@ -130,8 +131,8 @@ pub struct Filtered<'a, I> {
     data: FilteredData,
 }
 
-impl<'a, I: Iterator<Item = Result<u8, PdfError>>> Filtered<'a, I> {
-    fn decode_next_ascii_hex(&mut self) -> Option<Result<u8, PdfError>> {
+impl<'a, I: Iterator<Item = PdfResult<u8>>> Filtered<'a, I> {
+    fn decode_next_ascii_hex(&mut self) -> Option<PdfResult<u8>> {
         if *self.data.as_eod() {
             return None;
         }
@@ -181,7 +182,7 @@ impl<'a, I: Iterator<Item = Result<u8, PdfError>>> Filtered<'a, I> {
         Some(Ok(r))
     }
 
-    fn _next_ascii_digit(&mut self) -> Option<Result<u8, PdfError>> {
+    fn _next_ascii_digit(&mut self) -> Option<PdfResult<u8>> {
         while let Some(b) = self.iter.next() {
             let Ok(b) = b else { return Some(b) };
             if b.is_ascii_digit() {
@@ -190,7 +191,7 @@ impl<'a, I: Iterator<Item = Result<u8, PdfError>>> Filtered<'a, I> {
         }
         None
     }
-    fn next_non_whitespace(&mut self) -> Option<Result<u8, PdfError>> {
+    fn next_non_whitespace(&mut self) -> Option<PdfResult<u8>> {
         while let Some(b) = self.iter.next() {
             let Ok(b) = b else { return Some(b) };
             if !WHITESPACES.contains(&b) {
@@ -199,39 +200,121 @@ impl<'a, I: Iterator<Item = Result<u8, PdfError>>> Filtered<'a, I> {
         }
         None
     }
+    fn next_85(&mut self) -> Option<PdfResult<u8>> {
+        while let Some(b) = self.iter.next() {
+            let Ok(b) = b else { return Some(b) };
+            if (b'!'..b'u').contains(&b) || b"~>z".contains(&b) {
+                return Some(Ok(b));
+            }
+        }
+        None
+    }
 
-    fn encode_next_ascii_hex(&mut self) -> Option<Result<u8, PdfError>> {
+    fn encode_next_ascii_hex(&mut self) -> Option<PdfResult<u8>> {
         let temp = self.data.as_temp_mut();
-        if temp.is_some_and(|b| b != b'>') {
-            return temp.take().map(Result::Ok);
+        if temp.first().is_some_and(|b| *b != b'>') {
+            return temp.pop().map(Result::Ok);
         }
         match self.iter.next() {
             Some(Ok(b)) => {
                 let s = format!("{b:02X}");
                 let s = s.as_bytes();
-                *temp = Some(s[1]);
+                temp.push(s[1]);
                 Some(Ok(s[0]))
             }
             Some(Err(e)) => return Some(Err(e)),
-            None => match temp {
-                Some(_) => None,
-                None => {
-                    *temp = Some(b'>');
+            None => match temp[..] {
+                [_, ..] => None,
+                _ => {
+                    temp.push(b'>');
                     Some(Ok(b'>'))
                 }
             },
         }
     }
+
+    fn decode_next_ascii85(&mut self) -> Option<PdfResult<u8>> {
+        let mut bytes = [
+            self.next_non_whitespace(),
+            self.next_non_whitespace(),
+            self.next_non_whitespace(),
+            self.next_non_whitespace(),
+            self.next_non_whitespace(),
+        ];
+
+        // if bytes.iter().all(Option::is_some) {}else {
+
+        // }
+        todo!("DECODE")
+    }
+
+    fn encode_next_ascii85(&mut self) -> Option<PdfResult<u8>> {
+        {
+            let temp = self.data.as_temp_mut();
+            if !temp.is_empty() {
+                return match temp.pop() {
+                    Some(0) => {
+                        temp.push(0);
+                        None
+                    }
+                    Some(b) => Some(Ok(b)),
+                    None => unreachable!(),
+                };
+            }
+        }
+        let mut bytes = [
+            self.iter.next(),
+            self.iter.next(),
+            self.iter.next(),
+            self.iter.next(),
+        ];
+        let n = if bytes.iter().all(Option::is_some) {
+            4
+        } else {
+            let p = bytes
+                .iter()
+                .position(Option::is_none)
+                .expect("checked for none");
+            bytes = bytes.map(|orb| orb.or(Some(Ok(0))));
+
+            p
+        };
+        match bytes.iter().find(|e| matches!(e, Some(Err(_)))) {
+            Some(e) => return e.clone(),
+            None => (),
+        };
+        let bytes = bytes.map(Option::unwrap).map(Result::unwrap);
+        let mut base_256 = u32::from_be_bytes(bytes);
+        let mut out = [0; 5];
+        let o = if n == 4 && base_256 == 0 {
+            &[b'z']
+        } else {
+            for i in 0..5 {
+                out[i] = (base_256 % 85) as u8 + b'!';
+                base_256 /= 85;
+            }
+            &out[(4 - n)..]
+        };
+        if n != 4 {
+            self.data.as_temp_mut().push(0);
+            self.data.as_temp_mut().push(b'>');
+            self.data.as_temp_mut().push(b'~');
+        }
+        if n != 0 {
+            self.data.as_temp_mut().extend_from_slice(o);
+        }
+        self.data.as_temp_mut().pop().map(Result::Ok)
+    }
 }
 
-impl<'a, I: Iterator<Item = Result<u8, PdfError>>> Iterator for Filtered<'a, I> {
-    type Item = Result<u8, PdfError>;
+impl<'a, I: Iterator<Item = PdfResult<u8>>> Iterator for Filtered<'a, I> {
+    type Item = PdfResult<u8>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.decoding {
             match self.filter {
                 PdfFilter::ASCIIHex => self.decode_next_ascii_hex(),
-                PdfFilter::ASCII85 => todo!(),
+                PdfFilter::ASCII85 => self.decode_next_ascii85(),
                 PdfFilter::LZW => todo!(),
                 PdfFilter::Flate => todo!(),
                 PdfFilter::RunLength => todo!(),
@@ -244,7 +327,7 @@ impl<'a, I: Iterator<Item = Result<u8, PdfError>>> Iterator for Filtered<'a, I> 
         } else {
             match self.filter {
                 PdfFilter::ASCIIHex => self.encode_next_ascii_hex(),
-                PdfFilter::ASCII85 => todo!(),
+                PdfFilter::ASCII85 => self.encode_next_ascii85(),
                 PdfFilter::LZW => todo!(),
                 PdfFilter::Flate => todo!(),
                 PdfFilter::RunLength => todo!(),
@@ -260,7 +343,7 @@ impl<'a, I: Iterator<Item = Result<u8, PdfError>>> Iterator for Filtered<'a, I> 
 
 macro_rules! enum_cast {
     ($Name:ident, $($Var:ident $Inner:ty),+) => {
-        #[derive(Debug, Clone, Copy)]
+        #[derive(Debug, Clone)]
         #[allow(dead_code)]
         pub enum $Name{
             NoData,
@@ -289,12 +372,14 @@ macro_rules! enum_cast {
     };
 }
 
-enum_cast!(FilteredData, EOD bool, Temp Option<u8>);
+enum_cast!(FilteredData, EOD bool, Temp Vec<u8>);
 
 #[cfg(test)]
 mod tests {
+    use core::str;
+
     use super::PdfFilter;
-    use crate::PdfDict;
+    use crate::{PdfDict, pdf_error::PdfResult};
 
     #[test]
     fn encode_ascii_hex() {
@@ -338,6 +423,37 @@ mod tests {
             let c = decoded.collect::<Result<Vec<_>, _>>();
             assert!(c.is_ok());
             assert_eq!(c.unwrap().as_slice(), e);
+        }
+    }
+
+    #[test]
+    fn encode_ascii85() {
+        let d = PdfDict::empty();
+        let examples: &[(&[u8], &[u8])] = &[
+            (b"DCODE", b"6pja<70~>"),
+            (
+                b"testougfhAbIEf'pEJgf[IF[jgroho;iug;aoefh{Fjo;sirghl/sjrhgKGR",
+                b"FCfN8Dfo])BL-*!7:mod77q3)>=h:gC1hR*BQ#tHF_<dEDe3NoHU_ag4*,+VB4u*7F)#`/B1k`m~>",
+            ),
+            (b"\x00\x00\x00\x00", b"z~>"),
+            (b"a\x00\x00\x00\x00", b"@/p9-!!~>"),
+            (b"a\x00\x00\x00\x00\x00", b"@/p9-!!!~>"),
+            (b"a\x00\x00\x00\x00\x00\x00", b"@/p9-!!!!~>"),
+        ];
+
+        for (i, o) in examples {
+            let encoded = PdfFilter::ASCII85.encode(i.iter().copied().map(Result::Ok), &d);
+            let res: PdfResult<Vec<_>> = encoded.collect();
+            assert!(res.is_ok());
+            unsafe {
+                assert_eq!(
+                    res.clone().unwrap().as_slice(),
+                    *o,
+                    "{} => {}",
+                    str::from_utf8_unchecked(i),
+                    str::from_utf8_unchecked(res.unwrap().as_slice())
+                );
+            }
         }
     }
 }

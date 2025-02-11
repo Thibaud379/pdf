@@ -1,7 +1,4 @@
-use crate::{
-    Parsable,
-    pdf_error::{PdfError, PdfErrorKind},
-};
+use crate::{Parsable, pdf_error::*};
 
 use super::{PdfDict, PdfName, PdfNumeric, parse_indirect};
 
@@ -16,7 +13,7 @@ impl PdfStream {
     pub fn with_len(info: PdfDict, length: usize, data: Vec<u8>) -> Self {
         PdfStream { info, length, data }
     }
-    pub fn with_data(info: PdfDict, data: Vec<u8>) -> Result<Self, PdfError> {
+    pub fn with_data(info: PdfDict, data: Vec<u8>) -> PdfResult<Self> {
         let &PdfNumeric::PdfInt(dict_len) = info
             .get(&PdfName::from_raw_bytes(b"Length"))
             .ok_or(PdfError::with_kind(PdfErrorKind::MissingStreamLength))?
@@ -38,7 +35,7 @@ impl PdfStream {
     }
 }
 impl Parsable for PdfStream {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), PdfError> {
+    fn from_bytes(bytes: &[u8]) -> PdfResult<(Self, &[u8])> {
         let (indirect, b) = parse_indirect(bytes)?;
         let stream = indirect.as_stream()?;
         Ok((stream, b))

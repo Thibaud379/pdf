@@ -1,10 +1,7 @@
 use core::str;
 use std::str::FromStr;
 
-use crate::{
-    Parsable,
-    pdf_error::{PdfError, PdfErrorKind},
-};
+use crate::{Parsable, pdf_error::*};
 
 use super::WHITESPACES;
 
@@ -64,7 +61,7 @@ impl FromStr for PdfNumeric {
 }
 
 impl Parsable for PdfNumeric {
-    fn from_bytes(b: &[u8]) -> Result<(Self, &[u8]), PdfError> {
+    fn from_bytes(b: &[u8]) -> PdfResult<(Self, &[u8])> {
         let first_token = b
             .split(|b| WHITESPACES.contains(b))
             .next()

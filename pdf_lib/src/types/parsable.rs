@@ -1,14 +1,14 @@
 use core::str;
 
-use crate::pdf_error::{PdfError, PdfErrorKind};
+use crate::pdf_error::*;
 
 use super::*;
 
 pub trait Parsable: Sized {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), PdfError>;
+    fn from_bytes(bytes: &[u8]) -> PdfResult<(Self, &[u8])>;
 }
 
-pub fn parse<T>(bytes: &[u8]) -> Result<(T, &[u8]), PdfError>
+pub fn parse<T>(bytes: &[u8]) -> PdfResult<(T, &[u8])>
 where
     T: Parsable,
 {
@@ -16,7 +16,7 @@ where
 }
 
 impl Parsable for PdfObject {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), PdfError> {
+    fn from_bytes(bytes: &[u8]) -> PdfResult<(Self, &[u8])> {
         match bytes {
             [b'<', b'<', ..] => parse::<PdfDict>(bytes).map(|(o, b)| (o.into(), b)),
             [b'[', ..] => parse::<PdfArray>(bytes).map(|(o, b)| (o.into(), b)),
@@ -36,7 +36,7 @@ impl Parsable for PdfObject {
 }
 
 impl Parsable for bool {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), PdfError> {
+    fn from_bytes(bytes: &[u8]) -> PdfResult<(Self, &[u8])> {
         match bytes.len() {
             ..4 => None,
             4 => (bytes == b"true").then_some((true, &[] as &[u8])),
@@ -58,7 +58,7 @@ struct Whitespace {
     _bytes: Vec<u8>,
 }
 impl Parsable for Whitespace {
-    fn from_bytes(mut bytes: &[u8]) -> Result<(Self, &[u8]), PdfError> {
+    fn from_bytes(mut bytes: &[u8]) -> PdfResult<(Self, &[u8])> {
         let mut data = Vec::new();
         while bytes.first().is_some_and(|b| WHITESPACES.contains(b)) {
             data.push(bytes[0]);
@@ -68,7 +68,7 @@ impl Parsable for Whitespace {
     }
 }
 
-pub(crate) fn parse_indirect(mut bytes: &[u8]) -> Result<(PdfObject, &[u8]), PdfError> {
+pub(crate) fn parse_indirect(mut bytes: &[u8]) -> PdfResult<(PdfObject, &[u8])> {
     let e = Err(PdfError::with_kind(PdfErrorKind::Parse));
     let Some(first_space) = bytes.iter().position(|b| WHITESPACES.contains(b)) else {
         e?

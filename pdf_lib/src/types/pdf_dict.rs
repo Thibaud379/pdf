@@ -1,10 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{
-    Parsable, parse,
-    pdf_error::{PdfError, PdfErrorKind},
-    strip_whitespace,
-};
+use crate::{Parsable, parse, pdf_error::*, strip_whitespace};
 
 use super::{PdfName, PdfNull, PdfObject};
 
@@ -34,7 +30,7 @@ impl PdfDict {
 }
 
 impl Parsable for PdfDict {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), PdfError> {
+    fn from_bytes(bytes: &[u8]) -> PdfResult<(Self, &[u8])> {
         let [b'<', b'<', bytes @ ..] = bytes else {
             return Err(PdfError::with_kind(PdfErrorKind::Parse));
         };

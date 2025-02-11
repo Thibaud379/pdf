@@ -1,8 +1,4 @@
-use crate::{
-    Parsable, next_eol,
-    pdf_error::{PdfError, PdfErrorKind},
-    strip_whitespace,
-};
+use crate::{Parsable, next_eol, pdf_error::*, strip_whitespace};
 
 use std::{char::REPLACEMENT_CHARACTER, fmt::Display};
 
@@ -12,7 +8,7 @@ pub struct PdfHeader {
     binary_marker: bool,
 }
 impl PdfHeader {
-    pub fn with_verion(version: PdfVersion, binary_marker: bool) -> Result<Self, PdfError> {
+    pub fn with_verion(version: PdfVersion, binary_marker: bool) -> PdfResult<Self> {
         matches!((version.major, version.minor), (1, 0..=7) | (2, 0))
             .then_some(Self {
                 version,
