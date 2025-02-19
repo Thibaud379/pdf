@@ -91,13 +91,7 @@ impl FromStr for PdfCrossRefTableSubsectionHeader {
     type Err = PdfError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let items: Vec<usize> = s
-            .split(' ')
-            .map(str::parse)
-            .collect::<Result<_, _>>()
-            .map_err(|_e| PdfError {
-                kind: PdfErrorKind::Parse,
-            })?;
+        let items: Vec<usize> = s.split(' ').map(str::parse).collect::<Result<_, _>>()?;
         if items.len() != 2 {
             return Err(PdfError {
                 kind: PdfErrorKind::Parse,
@@ -129,21 +123,14 @@ impl FromStr for PdfCrossRefTableEntry {
                 kind: PdfErrorKind::Parse,
             });
         }
-        let (offset, gen_number, free) = (
-            items[0].parse().map_err(|_e| PdfError {
-                kind: PdfErrorKind::Parse,
-            })?,
-            items[1].parse().map_err(|_e| PdfError {
-                kind: PdfErrorKind::Parse,
-            })?,
-            match items.get(2) {
+        let (offset, gen_number, free) =
+            (items[0].parse()?, items[1].parse()?, match items.get(2) {
                 Some(&"f") => Ok(true),
                 Some(&"n") => Ok(false),
                 _ => Err(PdfError {
                     kind: PdfErrorKind::Parse,
                 }),
-            }?,
-        );
+            }?);
 
         Ok(PdfCrossRefTableEntry {
             offset,

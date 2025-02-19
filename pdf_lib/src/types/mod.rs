@@ -84,6 +84,10 @@ macro_rules! as_indirect_impl {
         }
     )+    };
 }
+as_indirect_impl!(
+    PdfNumeric PdfString PdfName PdfArray PdfDict PdfStream PdfNull PdfObject
+);
+
 macro_rules! as_kind_impl {
     ($($K:ty)+) => {
         impl PdfObject {$(
@@ -104,9 +108,6 @@ macro_rules! as_kind_impl {
         )+}
     };
 }
-as_indirect_impl!(
-    PdfNumeric PdfString PdfName PdfArray PdfDict PdfStream PdfNull PdfObject
-);
 as_kind_impl!(
     Numeric String Name Array Dict Stream Null
 );

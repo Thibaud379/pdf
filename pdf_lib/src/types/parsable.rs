@@ -25,7 +25,7 @@ impl Parsable for PdfObject {
             [b'f' | b't', ..] => parse::<bool>(bytes).map(|(o, b)| (o.into(), b)),
             [b'n', ..] => parse::<PdfNull>(bytes).map(|(o, b)| (o.into(), b)),
             _ => {
-                // Handle Number and indirect object
+                // Handle Number, indirect object and ref
                 let indirect = parse_indirect(bytes);
                 let indirect_or_num =
                     indirect.or_else(|_e| parse::<PdfNumeric>(bytes).map(|(o, b)| (o.into(), b)));
@@ -51,6 +51,26 @@ impl Parsable for bool {
         .ok_or(PdfError {
             kind: PdfErrorKind::Parse,
         })
+    }
+}
+
+#[cfg(test)]
+mod test_bool {
+    use super::parse;
+
+    #[test]
+    fn parsing() {
+        let valid: [&[u8]; 3] = [b"true ", b"false", b"false "];
+        let expected = [(true, 4), (false, 5), (false, 5)];
+        for (bytes, (res, rest)) in valid.into_iter().zip(expected) {
+            let parsed = parse(bytes);
+            assert_eq!(parsed, Ok((res, &bytes[rest..])));
+        }
+
+        let invalid: [&[u8]; 3] = [b"True", b"fal se", b"false\\"];
+        for bytes in invalid {
+            assert!(parse::<bool>(bytes).is_err());
+        }
     }
 }
 #[derive(Clone)]
