@@ -11,7 +11,7 @@ pub struct PdfArray {
 }
 
 impl Parsable for PdfArray {
-    fn from_bytes(mut bytes: &[u8]) -> Result<(Self, &[u8]), crate::pdf_error::PdfError> {
+    fn from_bytes(mut bytes: &[u8]) -> Result<(Self, &[u8]), PdfError> {
         if !matches!(bytes.get(0), Some(b'[')) {
             return Err(PdfError::with_kind(PdfErrorKind::Parse));
         }

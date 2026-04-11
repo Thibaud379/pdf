@@ -1,3 +1,5 @@
+#![feature(assert_matches)]
+
 use crate::pdf_error::{PdfError, PdfErrorKind};
 
 mod filter;

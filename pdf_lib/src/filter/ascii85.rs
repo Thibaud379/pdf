@@ -176,6 +176,7 @@ impl<I: FilterIter> Iterator for DecodeASCII85<I> {
 mod test {
     use crate::{PdfDict, filter::Filter, pdf_error::PdfResult};
     use core::str;
+    use std::assert_matches::assert_matches;
 
     #[test]
     fn encode_ascii85() {
@@ -220,13 +221,28 @@ mod test {
             (b"a\x00\x00\x00\x00", b"@/p9-!!~>"),
             (b"a\x00\x00\x00\x00\x00", b"@/p9-!!!~>"),
             (b"a\x00\x00\x00\x00\x00\x00", b"@/p9-!!!!~>"),
+            (
+                "Man is distinguished, not only by his reason, \
+                but by this singular passion from other animals, \
+                which is a lust of the mind, that by a perseverance \
+                of delight in the continued and indefatigable generation \
+                of knowledge, exceeds the short vehemence of any carnal pleasure."
+                    .as_bytes(),
+                r#"9jqo^BlbD-BleB1DJ+*+F(f,q/0JhKF<GL>Cj@.4Gp$d7F!,
+                L7@<6@)/0JDEF<G%<+EV:2F!,O<DJ+*.@<*K0@<6L(Df-\0Ec5e;
+                DffZ(EZee.Bl.9pF"AGXBPCsi+DGm>@3BB/F*&OCAfu2/AKYi(DIb:@FD,*)
+                +C]U=@3BN#EcYf8ATD3s@q?d$AftVqCh[NqF<G:8+EV:.+Cf>-FD5W8ARlolDIal
+                (DId<j@<?3r@:F%a+D58'ATD4$Bl@l3De:,-DJs`8ARoFb/0JMK@qB4^F!,R<AKZ&-
+                DfTqBG%G>uD.RTpAKYo'+CT/5+Cei#DII?(E,9)oF*2M7/c~>"#
+                    .as_bytes(),
+            ),
         ];
 
         for (i, o) in examples {
             let decoded =
                 Filter::ASCII85.decode(o.iter().copied().map(Result::Ok), PdfDict::empty());
             let res: PdfResult<Vec<_>> = decoded.collect();
-            assert!(res.is_ok());
+            assert_matches!(res, Ok(_));
             unsafe {
                 assert_eq!(
                     res.clone().unwrap().as_slice(),

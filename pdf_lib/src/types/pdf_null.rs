@@ -17,9 +17,6 @@ impl Parsable for PdfNull {
 }
 impl From<Option<PdfObject>> for PdfObject {
     fn from(value: Option<PdfObject>) -> Self {
-        match value {
-            Some(o) => o,
-            None => PdfNull {}.into(),
-        }
+        value.unwrap_or_else(|| PdfNull {}.into())
     }
 }

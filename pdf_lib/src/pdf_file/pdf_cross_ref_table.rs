@@ -123,14 +123,17 @@ impl FromStr for PdfCrossRefTableEntry {
                 kind: PdfErrorKind::Parse,
             });
         }
-        let (offset, gen_number, free) =
-            (items[0].parse()?, items[1].parse()?, match items.get(2) {
+        let (offset, gen_number, free) = (
+            items[0].parse()?,
+            items[1].parse()?,
+            match items.get(2) {
                 Some(&"f") => Ok(true),
                 Some(&"n") => Ok(false),
                 _ => Err(PdfError {
                     kind: PdfErrorKind::Parse,
                 }),
-            }?);
+            }?,
+        );
 
         Ok(PdfCrossRefTableEntry {
             offset,
@@ -146,25 +149,25 @@ mod tests {
 
     mod examples {
         use super::*;
-        const EX_2: &str = "xref
-0 6
-0000000003 65535 f
-0000000017 00000 n
-0000000081 00000 n
-0000000000 00007 f
-0000000331 00000 n
-0000000409 00000 n";
+        const EX_2: &str = "xref\n\
+            0 6\n\
+            0000000003 65535 f\n\
+            0000000017 00000 n\n\
+            0000000081 00000 n\n\
+            0000000000 00007 f\n\
+            0000000331 00000 n\n\
+            0000000409 00000 n";
 
-        const EX_3: &str = "xref
-0 1
-0000000000 65535 f
-3 1
-0000025325 00000 n
-23 2
-0000025518 00002 n
-0000025635 00000 n
-30 1
-0000025777 00000 n";
+        const EX_3: &str = "xref\n\
+            0 1\n\
+            0000000000 65535 f\n\
+            3 1\n\
+            0000025325 00000 n\n\
+            23 2\n\
+            0000025518 00002 n\n\
+            0000025635 00000 n\n\
+            30 1\n\
+            0000025777 00000 n";
 
         fn ex_2_builder() -> PdfCrossRefTableSection {
             PdfCrossRefTableSection {

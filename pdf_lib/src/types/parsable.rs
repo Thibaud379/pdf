@@ -103,7 +103,7 @@ pub(crate) fn parse_indirect(mut bytes: &[u8]) -> PdfResult<(PdfObject, &[u8])> 
         object: o,
         generation: g,
     };
-    bytes = strip_whitespace(&bytes[first_space..]);
+    bytes = strip_whitespace(&bytes[second_space..]);
     if !bytes.starts_with(b"obj") {
         if bytes[0] == b'R' {
             return Ok((
