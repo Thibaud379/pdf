@@ -3,10 +3,13 @@ use core::str;
 use super::{PdfDict, PdfName, WHITESPACES};
 use crate::pdf_error::*;
 
+use crate::filter::lzw::EncodeLZW;
 use ascii85::*;
 use asciihex::*;
+
 mod ascii85;
 mod asciihex;
+mod lzw;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum FilterError {
@@ -89,6 +92,7 @@ impl<I: Iterator<Item = PdfResult<u8>>> Iterator for FilterData<I> {
 pub enum Encode<I> {
     ASCIIHex(EncodeASCIIHex<I>),
     ASCII85(EncodeASCII85<I>),
+    LZW(EncodeLZW<I>),
 }
 
 impl<I: FilterIter> Iterator for Encode<I> {
@@ -98,6 +102,7 @@ impl<I: FilterIter> Iterator for Encode<I> {
         match self {
             Encode::ASCIIHex(inner) => inner.next(),
             Encode::ASCII85(inner) => inner.next(),
+            Encode::LZW(inner) => inner.next(),
         }
     }
 }
