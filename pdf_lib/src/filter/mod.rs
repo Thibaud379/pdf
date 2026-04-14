@@ -1,15 +1,16 @@
-use core::str;
-
 use super::{PdfDict, PdfName, WHITESPACES};
 use crate::pdf_error::*;
+use core::str;
 
 use crate::filter::lzw::EncodeLZW;
 use ascii85::*;
 use asciihex::*;
+use rle::*;
 
 mod ascii85;
 mod asciihex;
 mod lzw;
+mod rle;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum FilterError {
@@ -93,6 +94,7 @@ pub enum Encode<I> {
     ASCIIHex(EncodeASCIIHex<I>),
     ASCII85(EncodeASCII85<I>),
     LZW(EncodeLZW<I>),
+    RLE(EncodeRLE<I>),
 }
 
 impl<I: FilterIter> Iterator for Encode<I> {
@@ -103,12 +105,14 @@ impl<I: FilterIter> Iterator for Encode<I> {
             Encode::ASCIIHex(inner) => inner.next(),
             Encode::ASCII85(inner) => inner.next(),
             Encode::LZW(inner) => inner.next(),
+            Encode::RLE(inner) => inner.next(),
         }
     }
 }
 pub enum Decode<I> {
     ASCIIHex(DecodeASCIIHex<I>),
     ASCII85(DecodeASCII85<I>),
+    RLE(DecodeRLE<I>),
 }
 impl<I: FilterIter> Iterator for Decode<I> {
     type Item = PdfResult<u8>;
@@ -117,6 +121,7 @@ impl<I: FilterIter> Iterator for Decode<I> {
         match self {
             Decode::ASCIIHex(inner) => inner.next(),
             Decode::ASCII85(inner) => inner.next(),
+            Decode::RLE(inner) => inner.next(),
         }
     }
 }
@@ -134,9 +139,9 @@ impl Filter {
         match self {
             Filter::ASCIIHex => Encode::ASCIIHex(EncodeASCIIHex::new(inner)),
             Filter::ASCII85 => Encode::ASCII85(EncodeASCII85::new(inner)),
-            Filter::LZW => todo!(),
+            Filter::LZW => Encode::LZW(EncodeLZW::new(inner)),
             Filter::Flate => todo!(),
-            Filter::RunLength => todo!(),
+            Filter::RunLength => Encode::RLE(EncodeRLE::new(inner)),
             Filter::CCITTFax => todo!(),
             Filter::JBIG2 => todo!(),
             Filter::DCT => todo!(),
@@ -159,7 +164,7 @@ impl Filter {
             Filter::ASCII85 => Decode::ASCII85(DecodeASCII85::new(inner)),
             Filter::LZW => todo!(),
             Filter::Flate => todo!(),
-            Filter::RunLength => todo!(),
+            Filter::RunLength => Decode::RLE(DecodeRLE::new(inner)),
             Filter::CCITTFax => todo!(),
             Filter::JBIG2 => todo!(),
             Filter::DCT => todo!(),

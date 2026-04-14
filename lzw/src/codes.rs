@@ -226,7 +226,7 @@ impl<I: Iterator<Item = u8>> Iterator for LZWCodeEncoder<I> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::assert_matches::assert_matches;
+    use std::assert_matches;
 
     #[test]
     fn example_pdf() {

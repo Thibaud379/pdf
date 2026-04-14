@@ -1,5 +1,3 @@
-#![feature(assert_matches)]
-
 mod bitstream;
 pub use bitstream::*;
 mod codes;
@@ -28,7 +26,7 @@ impl Default for EncoderOptions {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum LZWErrorKind {
     InvalidOptions,
 }

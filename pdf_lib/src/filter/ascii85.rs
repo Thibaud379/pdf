@@ -176,7 +176,7 @@ impl<I: FilterIter> Iterator for DecodeASCII85<I> {
 mod test {
     use crate::{PdfDict, filter::Filter, pdf_error::PdfResult};
     use core::str;
-    use std::assert_matches::assert_matches;
+    use std::assert_matches;
 
     #[test]
     fn encode_ascii85() {
