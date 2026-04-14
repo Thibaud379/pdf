@@ -23,60 +23,65 @@ impl<I: FilterIter> Iterator for EncodeRLE<I> {
 }
 const RLE_BUFFER_SIZE: usize = 128;
 
+enum RLEState {
+    Copy(u8),
+    Run(u8, u8),
+    Done,
+}
 pub struct DecodeRLE<I> {
     inner: FilterData<I>,
-    buffer: [u8; RLE_BUFFER_SIZE],
-    buffer_index: usize,
+    state: RLEState,
 }
 
 impl<I> DecodeRLE<I> {
     pub fn new(inner: FilterData<I>) -> Self {
         Self {
             inner,
-            buffer: [0; RLE_BUFFER_SIZE],
-            buffer_index: 0,
+            state: RLEState::Copy(0),
         }
     }
 }
 
+macro_rules! expect_next {
+    ($var:expr) => {
+        match $var {
+            None => {
+                return Some(Err(PdfError::with_kind(PdfErrorKind::Filter(MissingEOD))));
+            }
+            Some(Err(e)) => {
+                return Some(Err(e));
+            }
+            Some(Ok(val)) => val,
+        }
+    };
+}
 impl<I: FilterIter> Iterator for DecodeRLE<I> {
     type Item = PdfResult<u8>;
     fn next(&mut self) -> Option<Self::Item> {
-        if self.buffer_index > 0 {
-            let output = self.buffer[self.buffer_index - 1];
-            self.buffer_index -= 1;
-            return Some(Ok(output));
-        };
-        let marker = self.inner.next();
-        if marker.is_none() || marker.as_ref().is_some_and(|t| t.is_err()) {
-            return marker;
-        };
-        let marker = marker.unwrap().unwrap() as usize;
-        if marker < 128 {
-            let next_bytes: PdfResult<Vec<_>> = self.inner.by_ref().take(marker + 1).collect();
-            match next_bytes {
-                Err(e) => return Some(Err(e)),
-                Ok(mut b) => {
-                    if b.len() != marker + 1 {
-                        return Some(Err(PdfError::with_kind(PdfErrorKind::Filter(MissingEOD))));
-                    }
-                    b.extend(repeat(0).take(RLE_BUFFER_SIZE - 1 - marker));
-                    self.buffer = b.try_into().expect("we padded with zeros");
-                    self.buffer_index = marker;
-                }
-            };
-        } else if marker > 128 {
-            let byte_to_copy = self.inner.next();
-            if byte_to_copy.is_none() {
-                return Some(Err(PdfError::with_kind(PdfErrorKind::Filter(MissingEOD))));
-            };
-            if byte_to_copy.as_ref().is_some_and(|b| b.is_ok()) {
-                return byte_to_copy;
+        match self.state {
+            RLEState::Done => None,
+            RLEState::Copy(ref mut val) if *val > 0 => {
+                let output = expect_next!(self.inner.next());
+                *val -= 1;
+                Some(Ok(output))
             }
-            let byte = byte_to_copy.unwrap().unwrap();
-            self.buffer.fill(byte);
-            self.buffer_index = 257 - marker;
-        };
-        self.next()
+            RLEState::Run(ref mut val, byte) if *val > 0 => {
+                *val -= 1;
+                Some(Ok(byte))
+            }
+            _ => {
+                match expect_next!(self.inner.next()) {
+                    128 => self.state = RLEState::Done,
+                    val if val <= 127 => {
+                        self.state = RLEState::Copy(val+1);
+                    }
+                    val => {
+                        let b = expect_next!(self.inner.next());
+                        self.state = RLEState::Run(128 - (val - 129), b);
+                    }
+                };
+                self.next()
+            }
+        }
     }
 }
