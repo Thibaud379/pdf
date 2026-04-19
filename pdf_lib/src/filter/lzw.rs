@@ -6,7 +6,7 @@ use std::cell::RefCell;
 use std::iter::Map;
 
 thread_local! {
-    static ERROR: RefCell<Option<PdfError>> = RefCell::new(None);
+    static ERROR: RefCell<Option<PdfError>> = const { RefCell::new(None) };
 }
 fn adapt(v: PdfResult<u8>) -> u8 {
     v.unwrap_or_else(|e| {
@@ -14,9 +14,10 @@ fn adapt(v: PdfResult<u8>) -> u8 {
         0
     })
 }
+type EncoderMap<I> = LZWEncoder<Map<I, fn(PdfResult<u8>) -> u8>>;
 pub struct EncodeLZW<I> {
     errored: bool,
-    encoder: LZWEncoder<Map<I, fn(PdfResult<u8>) -> u8>>,
+    encoder: EncoderMap<I>,
 }
 
 impl<I: Iterator<Item = PdfResult<u8>>> EncodeLZW<I> {
@@ -48,7 +49,7 @@ impl<I: Iterator<Item = PdfResult<u8>>> Iterator for EncodeLZW<I> {
     type Item = PdfResult<u8>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if (self.errored) {
+        if self.errored {
             return None;
         };
         if ERROR.with_borrow(|e| e.is_some()) {

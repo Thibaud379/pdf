@@ -36,7 +36,7 @@ impl<I: Debug> Debug for LZWCodeEncoder<I> {
                 &self
                     .table
                     .iter()
-                    .filter(|(k, code)| {
+                    .filter(|(_k, code)| {
                         if **code < 256 {
                             self.options.dict.contains(&(**code as u8))
                         } else {
@@ -51,30 +51,30 @@ impl<I: Debug> Debug for LZWCodeEncoder<I> {
 impl EncoderOptions {
     pub(crate) fn check(self) -> Result<EncoderOptionsChecked, LZWError> {
         (self.min_bit_width <= self.max_bit_width)
-            .then(|| 0)
+            .then_some(0)
             .ok_or(LZWError::with_kind_and_reason(
                 LZWErrorKind::InvalidOptions,
                 "min_bit_width > max_bit_width",
             ))?;
         (self.max_bit_width <= 2 * size_of::<usize>())
-            .then(|| 0)
+            .then_some(0)
             .ok_or(LZWError::with_kind_and_reason(
                 LZWErrorKind::InvalidOptions,
                 "max_bit_width > 2*size_of::<usize>",
             ))?;
         let max_dict_code = self.dict.iter().copied().max().unwrap_or_default();
         let mut first_code = (max_dict_code as usize).max(self.clear_table_code);
-        if self.eof_code.is_some() {
-            first_code = first_code.max(self.eof_code.unwrap());
+        if let Some(code) = self.eof_code {
+            first_code = first_code.max(code);
         }
         first_code += 1;
         let min_bits = first_code.ilog2();
-        (self.min_bit_width >= min_bits as usize).then(|| 0).ok_or(
-            LZWError::with_kind_and_reason(
+        (self.min_bit_width >= min_bits as usize)
+            .then_some(0)
+            .ok_or(LZWError::with_kind_and_reason(
                 LZWErrorKind::InvalidOptions,
                 "min_bit_width is too small for the provided dict",
-            ),
-        )?;
+            ))?;
         Ok(EncoderOptionsChecked {
             early_change: self.early_change,
             min_bit_width: self.min_bit_width,

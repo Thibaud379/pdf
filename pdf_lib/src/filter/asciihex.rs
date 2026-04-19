@@ -26,7 +26,7 @@ impl<I: FilterIter> Iterator for EncodeASCIIHex<I> {
                 self.temp = Some(s[1]);
                 Some(Ok(s[0]))
             }
-            Some(Err(e)) => return Some(Err(e)),
+            Some(Err(e)) => Some(Err(e)),
             None => match self.temp {
                 Some(_) => None,
                 None => {
@@ -56,7 +56,7 @@ impl<I: Iterator<Item = PdfResult<u8>>> Iterator for DecodeASCIIHex<I> {
         }
         let first_byte = match self.inner.next_non_whitespace() {
             Some(Ok(b)) if b.is_ascii_hexdigit() => b,
-            Some(Ok(b)) if b == b'>' => {
+            Some(Ok(b'>')) => {
                 self.eod = true;
                 return None;
             }
@@ -79,7 +79,7 @@ impl<I: Iterator<Item = PdfResult<u8>>> Iterator for DecodeASCIIHex<I> {
 
         let second_byte = match self.inner.next_non_whitespace() {
             Some(Ok(b)) if b.is_ascii_hexdigit() => Some(b),
-            Some(Ok(b)) if b == b'>' => {
+            Some(Ok(b'>')) => {
                 self.eod = true;
                 None
             }

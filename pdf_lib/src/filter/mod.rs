@@ -67,13 +67,13 @@ macro_rules! filter_impl {
 filter_impl!(Filter,
     ASCIIHex b"ASCIIHexDecode",
     ASCII85 b"ASCII85Decode",
-    LZW b"LZWDecode" b"Predictor" b"Colors" b"BitsPerComponent" b"Columns" b"EarlyChange",
+    Lzw b"LZWDecode" b"Predictor" b"Colors" b"BitsPerComponent" b"Columns" b"EarlyChange",
     Flate b"FlateDecode" b"Predictor" b"Colors" b"BitsPerComponent" b"Columns",
     RunLength b"RunLengthDecode",
     CCITTFax b"CCITTFaxDecode" b"K" b"EndOfLine" b"EncodeByteAlign" b"Columns" b"Rows" b"EndOfBlock" b"BlackIs1" b"DamagedRowsBeforeError",
     JBIG2 b"JBIG2Decode" b"JBIG2Globals",
-    DCT b"DCTDecode" b"ColorTransform",
-    JPX b"JPXDecode",
+    Dct b"DCTDecode" b"ColorTransform",
+    Jpx b"JPXDecode",
     Crypt b"CryptDecode" b"Type" b"Name"
 );
 
@@ -93,8 +93,8 @@ impl<I: Iterator<Item = PdfResult<u8>>> Iterator for FilterData<I> {
 pub enum Encode<I> {
     ASCIIHex(EncodeASCIIHex<I>),
     ASCII85(EncodeASCII85<I>),
-    LZW(EncodeLZW<I>),
-    RLE(EncodeRLE<I>),
+    Lzw(EncodeLZW<I>),
+    Rle(EncodeRLE<I>),
 }
 
 impl<I: FilterIter> Iterator for Encode<I> {
@@ -104,15 +104,15 @@ impl<I: FilterIter> Iterator for Encode<I> {
         match self {
             Encode::ASCIIHex(inner) => inner.next(),
             Encode::ASCII85(inner) => inner.next(),
-            Encode::LZW(inner) => inner.next(),
-            Encode::RLE(inner) => inner.next(),
+            Encode::Lzw(inner) => inner.next(),
+            Encode::Rle(inner) => inner.next(),
         }
     }
 }
 pub enum Decode<I> {
     ASCIIHex(DecodeASCIIHex<I>),
     ASCII85(DecodeASCII85<I>),
-    RLE(DecodeRLE<I>),
+    Rle(DecodeRLE<I>),
 }
 impl<I: FilterIter> Iterator for Decode<I> {
     type Item = PdfResult<u8>;
@@ -121,7 +121,7 @@ impl<I: FilterIter> Iterator for Decode<I> {
         match self {
             Decode::ASCIIHex(inner) => inner.next(),
             Decode::ASCII85(inner) => inner.next(),
-            Decode::RLE(inner) => inner.next(),
+            Decode::Rle(inner) => inner.next(),
         }
     }
 }
@@ -139,13 +139,13 @@ impl Filter {
         match self {
             Filter::ASCIIHex => Encode::ASCIIHex(EncodeASCIIHex::new(inner)),
             Filter::ASCII85 => Encode::ASCII85(EncodeASCII85::new(inner)),
-            Filter::LZW => Encode::LZW(EncodeLZW::new(inner)),
+            Filter::Lzw => Encode::Lzw(EncodeLZW::new(inner)),
             Filter::Flate => todo!(),
-            Filter::RunLength => Encode::RLE(EncodeRLE::new(inner)),
+            Filter::RunLength => Encode::Rle(EncodeRLE::new(inner)),
             Filter::CCITTFax => todo!(),
             Filter::JBIG2 => todo!(),
-            Filter::DCT => todo!(),
-            Filter::JPX => todo!(),
+            Filter::Dct => todo!(),
+            Filter::Jpx => todo!(),
             Filter::Crypt => todo!(),
         }
     }
@@ -162,13 +162,13 @@ impl Filter {
         match self {
             Filter::ASCIIHex => Decode::ASCIIHex(DecodeASCIIHex::new(inner)),
             Filter::ASCII85 => Decode::ASCII85(DecodeASCII85::new(inner)),
-            Filter::LZW => todo!(),
+            Filter::Lzw => todo!(),
             Filter::Flate => todo!(),
-            Filter::RunLength => Decode::RLE(DecodeRLE::new(inner)),
+            Filter::RunLength => Decode::Rle(DecodeRLE::new(inner)),
             Filter::CCITTFax => todo!(),
             Filter::JBIG2 => todo!(),
-            Filter::DCT => todo!(),
-            Filter::JPX => todo!(),
+            Filter::Dct => todo!(),
+            Filter::Jpx => todo!(),
             Filter::Crypt => todo!(),
         }
     }
@@ -183,7 +183,7 @@ where
     I: Iterator<Item = PdfResult<u8>>,
 {
     fn next_non_whitespace(&mut self) -> Option<PdfResult<u8>> {
-        while let Some(b) = self.next() {
+        for b in self.by_ref() {
             let Ok(b) = b else { return Some(b) };
             if !WHITESPACES.contains(&b) {
                 return Some(Ok(b));

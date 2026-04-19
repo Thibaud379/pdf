@@ -14,7 +14,7 @@ pub struct PdfString {
 impl PdfString {
     pub fn from_raw_bytes(bytes: &[u8]) -> Self {
         Self {
-            data: bytes.iter().copied().collect(),
+            data: bytes.to_vec(),
         }
     }
 
@@ -145,6 +145,10 @@ impl PdfString {
         self.data.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.data.len() == 0
+    }
+
     fn from_bytes_hexa(bytes: &[u8]) -> PdfResult<(PdfString, &[u8])> {
         let e = Err(PdfError::with_kind(PdfErrorKind::Parse));
         let Some(right_bracket) = bytes.iter().position(|b| *b == b'>') else {
@@ -197,10 +201,10 @@ impl PdfString {
                     b'('
                 }
                 b if EOLS.contains(&b) => {
-                    if b == b'\r' {
-                        if let [b'\n', rrest @ ..] = rest {
-                            rest = rrest;
-                        }
+                    if b == b'\r'
+                        && let [b'\n', rrest @ ..] = rest
+                    {
+                        rest = rrest;
                     }
                     b'\n'
                 }

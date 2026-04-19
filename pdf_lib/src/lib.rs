@@ -1,6 +1,3 @@
-#![feature(iter_collect_into)]
-#![feature(iterator_try_collect)]
-
 use crate::pdf_error::{PdfError, PdfErrorKind};
 
 mod filter;

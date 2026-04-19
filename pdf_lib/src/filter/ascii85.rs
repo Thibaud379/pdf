@@ -48,18 +48,17 @@ impl<I: FilterIter> Iterator for EncodeASCII85<I> {
 
             p
         };
-        match bytes.iter().find(|e| matches!(e, Some(Err(_)))) {
-            Some(e) => return e.clone(),
-            None => (),
+        if let Some(e) = bytes.iter().find(|e| matches!(e, Some(Err(_)))) {
+            return e.clone();
         };
         let bytes = bytes.map(Option::unwrap).map(Result::unwrap);
         let mut base_256 = u32::from_be_bytes(bytes);
         let mut out = [0; 5];
         let o = if n == 4 && base_256 == 0 {
-            &[b'z']
+            b"z"
         } else {
-            for i in 0..5 {
-                out[i] = (base_256 % 85) as u8 + b'!';
+            for b in &mut out {
+                *b = (base_256 % 85) as u8 + b'!';
                 base_256 /= 85;
             }
             &out[(4 - n)..]

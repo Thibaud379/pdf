@@ -27,9 +27,7 @@ impl Parsable for PdfObject {
             _ => {
                 // Handle Number, indirect object and ref
                 let indirect = parse_indirect(bytes);
-                let indirect_or_num =
-                    indirect.or_else(|_e| parse::<PdfNumeric>(bytes).map(|(o, b)| (o.into(), b)));
-                indirect_or_num
+                indirect.or_else(|_e| parse::<PdfNumeric>(bytes).map(|(o, b)| (o.into(), b)))
             }
         }
     }
@@ -93,12 +91,12 @@ pub(crate) fn parse_indirect(mut bytes: &[u8]) -> PdfResult<(PdfObject, &[u8])> 
     let Some(first_space) = bytes.iter().position(|b| WHITESPACES.contains(b)) else {
         e?
     };
-    let o = usize::from_str_radix(str::from_utf8(&bytes[..first_space])?, 10)?;
+    let o = str::from_utf8(&bytes[..first_space])?.parse()?;
     bytes = strip_whitespace(&bytes[first_space..]);
     let Some(second_space) = bytes.iter().position(|b| WHITESPACES.contains(b)) else {
         e?
     };
-    let g = usize::from_str_radix(str::from_utf8(&bytes[..second_space])?, 10)?;
+    let g = str::from_utf8(&bytes[..second_space])?.parse()?;
     let indirect = IndirectData {
         object: o,
         generation: g,
